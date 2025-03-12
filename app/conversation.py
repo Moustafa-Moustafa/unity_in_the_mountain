@@ -99,8 +99,6 @@ while True:
         print("Invalid index. Please enter a number between 0 and 4.")
         continue
 
-    messages = load_message_history(history_index)
-
     print()
     talk_to_character(history_index)
 
