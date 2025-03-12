@@ -22,10 +22,15 @@ def load_message_history(index):
         with open(filename, "r") as file:
             return json.load(file)
     else:
-        print(f"No message history found for index {index}. Loading the initial system prompt for that character.")
+        print(f"No conversation history found for index {index}. Loading the initial system prompt for that character.")
         filename = f"data/initial_system_prompts/character_{index}.json"
-        with open(filename, "r") as file:
-            return json.load(file)
+        if (os.path.exists(filename)):
+            with open(filename, "r") as file:
+                return json.load(file)
+        else:
+            filename = "data/initial_system_prompts/generic.json"
+            with open(filename, "r") as file:
+                return json.load(file)
 
 def save_message_history(index, messages):
     directory = "data/conversations"
@@ -82,24 +87,25 @@ def talk_to_character(index):
     # Save the message history
     save_message_history(index, messages)
 
-while True:
-    # Select a message history to load
-    history_index = input("Enter history index (0-4): ").lower()
+if __name__ == "__main__":
+    while True:
+        # Select a message history to load
+        history_index = input("Enter history index (0-9, 0-4 are defined characters 5-9 will be created by the AI): ").lower()
 
-    if (history_index == "exit"):
-        break
-    
-    try:
-        history_index = int(history_index)
-    except ValueError:
-        print("Invalid input. Please enter a number between 0 and 4.")
-        continue
-    
-    if (history_index < 0 or history_index > 4):
-        print("Invalid index. Please enter a number between 0 and 4.")
-        continue
+        if history_index == "exit":
+            break
 
-    print()
-    talk_to_character(history_index)
+        try:
+            history_index = int(history_index)
+        except ValueError:
+            print("Invalid input. Please enter a number between 0 and 9. Or 'exit' to leave.")
+            continue
 
-client.close()
+        if history_index < 0 or history_index > 9:
+            print("Invalid index. Please enter a number between 0 and 9. Or 'exit' to leave.")
+            continue
+
+        print()
+        talk_to_character(history_index)
+
+    client.close()
