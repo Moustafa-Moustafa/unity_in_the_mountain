@@ -1,5 +1,6 @@
 import pygame
 import random
+from conversation import talk_to_character
 
 # Initialize Pygame
 pygame.init()
@@ -23,7 +24,7 @@ DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Grid Game")
+pygame.display.set_caption("Unity in the Mountains")
 
 # Initialize grid
 grid = [[None for _ in range(COLS)] for _ in range(ROWS)]
@@ -140,6 +141,7 @@ while running:
                         npc.freeze = not npc.freeze
                         if npc.freeze:
                             print(f"Conversation started with NPC {npc.label}")
+                            talk_to_character(npcs.index(npc), screen)
             elif event.key == pygame.K_f:
                 for npc in npcs:
                     if npc.freeze and not npc.following:

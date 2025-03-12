@@ -5,6 +5,10 @@ import os
 import json
 from openai import AzureOpenAI
 
+
+screen = None
+font = None 
+
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 model_name = os.getenv("AZURE_OPENAI_MODEL_NAME")
 deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
@@ -48,8 +52,8 @@ def save_message_history(index, messages):
     with open(filename, "w") as file:
         json.dump(messages, file)
         
-def talk_to_character(index):
-    manager, history_container, input_box, history_text, response_box = initialize_gui()
+def talk_to_character(index, screen):
+    manager, input_box, history_text, response_box = initialize_gui(screen)
     
     messages = load_message_history(index)
     history_text.set_text(get_history_html(messages))
@@ -120,7 +124,10 @@ def update_gui(manager, time_delta):
     manager.draw_ui(screen)
     pygame.display.flip()
 
-def initialize_gui():
+def initialize_gui(gui_screen):
+    global screen
+    screen = gui_screen
+    
     manager = pygame_gui.UIManager(
         (800, 600)
     )
@@ -168,7 +175,7 @@ def initialize_gui():
     history_container.set_scrollable_area_dimensions(history_text.rect.size)
     history_container.scrolling_bottom = True
     
-    return manager, history_container, input_box, history_text, response_box
+    return manager, input_box, history_text, response_box
 
 def get_history_html(messages):
     history_html = ""
@@ -211,10 +218,9 @@ def select_history_index_or_quit():
         clock.tick(30)
 
 if __name__ == "__main__":
-    # Initialize Pygame
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("Chat with Character")
+    screen = pygame.display.set_mode((800, 600))
     font = pygame.font.Font(None, 36)
     clock = pygame.time.Clock()
 
@@ -222,5 +228,5 @@ if __name__ == "__main__":
     while True:
         history_index = select_history_index_or_quit()
 
-        talk_to_character(history_index)
+        talk_to_character(history_index, screen)
     

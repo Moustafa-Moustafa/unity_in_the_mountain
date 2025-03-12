@@ -32,4 +32,5 @@ It can be useful to jump straight in to talking to a character. To do this:
 python app/conversation.py
 ```
 
+Note that conversations are saved and loaded each time you talk with a character. This includes between separate runs. You can delete the history of a conversation, in order to start fresh, by removing the files in `/home/rogardle/projects/unity_in_the_mountain/data/conversations`
 
