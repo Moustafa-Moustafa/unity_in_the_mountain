@@ -1,6 +1,178 @@
-def main():
-    print("Hello from unity-in-the-mountain!")
+import pygame
+import random
 
+# Initialize Pygame
+pygame.init()
 
-if __name__ == "__main__":
-    main()
+# Constants
+WIDTH, HEIGHT = 800, 800
+ROWS, COLS = 20, 20
+CELL_SIZE = WIDTH // COLS
+FPS = 10
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+
+# Directions
+DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+# Initialize screen
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Grid Game")
+
+# Initialize grid
+grid = [[None for _ in range(COLS)] for _ in range(ROWS)]
+
+# Initialize Pygame font
+pygame.font.init()
+font = pygame.font.SysFont(None, 48)
+
+# Player class
+class Player:
+    def __init__(self, x, y, color):
+        self.x = x
+        self.y = y
+        self.color = color
+        self.freeze = False
+        grid[y][x] = self
+
+    def move(self, dx, dy):
+        if not self.freeze:
+            new_x = self.x + dx
+            new_y = self.y + dy
+            if 0 <= new_x < COLS and 0 <= new_y < ROWS and grid[new_y][new_x] is None:
+                grid[self.y][self.x] = None
+                self.x = new_x
+                self.y = new_y
+                grid[self.y][self.x] = self
+
+    def draw(self):
+        pygame.draw.rect(screen, self.color, (self.x * CELL_SIZE, self.y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+# NPC class
+class NPC(Player):
+    def __init__(self, x, y, color, speed, label):
+        super().__init__(x, y, color)
+        self.speed = speed
+        self.move_counter = 0
+        self.label = label
+        self.font = pygame.font.SysFont(None, 24)
+        self.following = False
+
+    def move_random(self):
+        if not self.freeze and not self.following:
+            self.move_counter += 1
+            if self.move_counter >= self.speed:
+                self.move_counter = 0
+                dx, dy = random.choice(DIRECTIONS)
+                new_x = (self.x + dx)
+                new_y = (self.y + dy)
+                if 0 <= new_x < COLS and 0 <= new_y < ROWS and grid[new_y][new_x] is None:
+                    grid[self.y][self.x] = None
+                    self.x = new_x
+                    self.y = new_y
+                    grid[self.y][self.x] = self
+
+    def follow_player(self, player):
+        if self.following:
+            dx = player.x - self.x
+            dy = player.y - self.y
+            if abs(dx) > 1:
+                dx = 1 if dx > 0 else -1
+            if abs(dy) > 1:
+                dy = 1 if dy > 0 else -1
+            new_x = self.x + dx
+            new_y = self.y + dy
+            if 0 <= new_x < COLS and 0 <= new_y < ROWS and grid[new_y][new_x] is None:
+                grid[self.y][self.x] = None
+                self.x = new_x
+                self.y = new_y
+                grid[self.y][self.x] = self
+
+    def draw(self):
+        super().draw()
+        label_surface = self.font.render(self.label, True, BLACK)
+        screen.blit(label_surface, (self.x * CELL_SIZE + 5, self.y * CELL_SIZE + 5))
+
+# Obstacles
+obstacles = [(4, 4), (4, 5), (5, 4), (5, 5), (10, 10), (15, 15)]
+for x, y in obstacles:
+    grid[y][x] = 'obstacle'
+
+# Function to generate a random color
+def random_color():
+    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+# Create player and NPCs
+player = Player(0, 0, GREEN)
+labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random_color(), random.randint(2, 5), labels[i]) for i in range(8)]
+
+# Main game loop
+running = True
+clock = pygame.time.Clock()
+following_npcs = 0
+
+while running:
+    clock.tick(FPS)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                for npc in npcs:
+                    if abs(player.x - npc.x) <= 1 and abs(player.y - npc.y) <= 1:
+                        npc.freeze = not npc.freeze
+                        if npc.freeze:
+                            print(f"Conversation started with NPC {npc.label}")
+            elif event.key == pygame.K_f:  # Corrected key constant
+                for npc in npcs:
+                    if npc.freeze and not npc.following:
+                        npc.following = True
+                        following_npcs += 1
+                        if following_npcs >= 5:
+                            running = False
+                            print("Game Over: 5 NPCs are following the main character!")
+            elif event.key == pygame.K_UP:
+                player.move(0, -1)
+            elif event.key == pygame.K_DOWN:
+                player.move(0, 1)
+            elif event.key == pygame.K_LEFT:
+                player.move(-1, 0)
+            elif event.key == pygame.K_RIGHT:
+                player.move(1, 0)
+
+    # Unfreeze NPCs if player moves away
+    for npc in npcs:
+        if abs(player.x - npc.x) > 1 or abs(player.y - npc.y) > 1:
+            npc.freeze = False
+
+    # Move NPCs
+    for npc in npcs:
+        if npc.following:
+            npc.follow_player(player)
+        else:
+            npc.move_random()
+
+    # Draw everything
+    screen.fill(WHITE)
+    for x, y in obstacles:
+        pygame.draw.rect(screen, BLUE, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    player.draw()
+    for npc in npcs:
+        npc.draw()
+    pygame.display.flip()
+
+# Display game over banner
+screen.fill(WHITE)
+game_over_surface = font.render("Game Over: 5 NPCs are following!", True, BLACK)
+screen.blit(game_over_surface, (WIDTH // 2 - game_over_surface.get_width() // 2, HEIGHT // 2 - game_over_surface.get_height() // 2))
+pygame.display.flip()
+pygame.time.wait(3000)
+
+pygame.quit()
