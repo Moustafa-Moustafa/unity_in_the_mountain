@@ -96,13 +96,19 @@ Luna starts off as a reluctant participant, wary of using her powers. Through he
 
 ### Kai the Inventor
 
-Backstory: Kai is a brilliant inventor who loves to create gadgets and machines. He is always tinkering with new ideas and has a knack for solving problems with his inventions.
-Character Arc: Kai is initially focused on his inventions, often neglecting the needs of the party. Over time, he learns to balance his passion for creation with the importance of teamwork, providing crucial support with his gadgets.
+#### Backstory
+Kai is a brilliant inventor who loves to create gadgets and machines. He is always tinkering with new ideas and has a knack for solving problems with his inventions.
+
+#### Character Arc
+Kai is initially focused on his inventions, often neglecting the needs of the party. Over time, he learns to balance his passion for creation with the importance of teamwork, providing crucial support with his gadgets.
 
 ### Zara the Mystic
 
-Backstory: Zara is a mystic with the ability to communicate with the spirits of the mountains. She has a deep connection to the land and its secrets, but her powers are often misunderstood.
-Character Arc: Zara starts off as an enigmatic figure, keeping her distance from the others. As the game progresses, she opens up and shares her knowledge, guiding the party through the spiritual challenges they face.
+#### Backstory
+Zara is a mystic with the ability to communicate with the spirits of the mountains. She has a deep connection to the land and its secrets, but her powers are often misunderstood.
+
+#### Character Arc
+Zara starts off as an enigmatic figure, keeping her distance from the others. As the game progresses, she opens up and shares her knowledge, guiding the party through the spiritual challenges they face.
 
 ## Conclusion
 

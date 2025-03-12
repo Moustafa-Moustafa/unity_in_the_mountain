@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import json
 from openai import AzureOpenAI
@@ -15,33 +16,33 @@ client = AzureOpenAI(
 )
 
 def load_message_history(index):
-    filename = f"message_history_{index}.json"
+    filename = f"data/conversations/character_{index}.json"
+    
     if os.path.exists(filename):
         with open(filename, "r") as file:
             return json.load(file)
-    return []
+    else:
+        print(f"No message history found for index {index}. Loading the initial system prompt for that character.")
+        filename = f"data/initial_system_prompts/character_{index}.json"
+        with open(filename, "r") as file:
+            return json.load(file)
 
 def save_message_history(index, messages):
-    filename = f"message_history_{index}.json"
+    directory = "data/conversations"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    filename = f"{directory}/character_{index}.json"
+    
     if os.path.exists(filename):
-        os.rename(filename, f"{filename}.backup")
+        timestamped = datetime.now().strftime("%y%m%d_%H%M")
+        os.rename(filename, f"{directory}/{timestamped}_character_{index}.json")
+    
     with open(filename, "w") as file:
         json.dump(messages, file)
-
-while True:
-    system_prompt = input("Enter system prompt (or type 'exit' to quit): ")
-    if system_prompt.lower() == "exit":
-        break
-
-    # Select a message history to load
-    history_index = int(input("Enter history index (0-4): "))
-    messages = load_message_history(history_index)
-
-    # Initialize message history with the system prompt
-    messages.append({
-        "role": "system",
-        "content": system_prompt,
-    })
+        
+def talk_to_character(index):
+    messages = load_message_history(index)
 
     while True:
         print()
@@ -66,20 +67,41 @@ while True:
             model=deployment,
         )
 
+        assistant_message = ""
         for update in response:
             if update.choices:
-                assistant_message = update.choices[0].delta.content or ""
-                print(assistant_message, end="")
-                # Append assistant message to history
-                messages.append({
-                    "role": "assistant",
-                    "content": assistant_message,
-                })
+                assistant_message += update.choices[0].delta.content or ""
+                print(update.choices[0].delta.content or "", end="")
+        
+        # Append assistant message to history
+        messages.append({
+            "role": "assistant",
+            "content": assistant_message,
+        })
 
     # Save the message history
-    save_message_history(history_index, messages)
-    print("Conversation ended. Starting a new one...")
+    save_message_history(index, messages)
 
-print("Goodbye!")
+while True:
+    # Select a message history to load
+    history_index = input("Enter history index (0-4): ").lower()
+
+    if (history_index == "exit"):
+        break
+    
+    try:
+        history_index = int(history_index)
+    except ValueError:
+        print("Invalid input. Please enter a number between 0 and 4.")
+        continue
+    
+    if (history_index < 0 or history_index > 4):
+        print("Invalid index. Please enter a number between 0 and 4.")
+        continue
+
+    messages = load_message_history(history_index)
+
+    print()
+    talk_to_character(history_index)
 
 client.close()
