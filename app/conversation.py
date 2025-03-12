@@ -1,3 +1,4 @@
+import pygame
 from datetime import datetime
 import os
 import json
@@ -48,64 +49,105 @@ def save_message_history(index, messages):
         
 def talk_to_character(index):
     messages = load_message_history(index)
+    user_input = ""
 
     while True:
-        print()
-        user_input = input("You: ")
-        print()
-        
-        if user_input.lower() == "bye":
-            break
+        screen.fill((255, 255, 255))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    if user_input.lower() == "bye":
+                        save_message_history(index, messages)
+                        return
+                    # Append user message to history
+                    messages.append({
+                        "role": "Player",
+                        "content": user_input,
+                    })
 
-        # Append user message to history
-        messages.append({
-            "role": "user",
-            "content": user_input,
-        })
+                    response = client.chat.completions.create(
+                        stream=True,
+                        messages=messages,
+                        max_tokens=4096,
+                        temperature=1.0,
+                        top_p=1.0,
+                        model=deployment,
+                    )
 
-        response = client.chat.completions.create(
-            stream=True,
-            messages=messages,
-            max_tokens=4096,
-            temperature=1.0,
-            top_p=1.0,
-            model=deployment,
-        )
+                    assistant_message = ""
+                    for update in response:
+                        if update.choices:
+                            assistant_message += update.choices[0].delta.content or ""
+                            user_input = ""
+                    
+                    # Append assistant message to history
+                    messages.append({
+                        "role": "NPC",
+                        "content": assistant_message,
+                    })
+                elif event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]
+                else:
+                    user_input += event.unicode
 
-        assistant_message = ""
-        for update in response:
-            if update.choices:
-                assistant_message += update.choices[0].delta.content or ""
-                print(update.choices[0].delta.content or "", end="")
-        
-        # Append assistant message to history
-        messages.append({
-            "role": "assistant",
-            "content": assistant_message,
-        })
+        # Render user input
+        input_surface = font.render(f"You: {user_input}", True, (0, 0, 0))
+        screen.blit(input_surface, (20, 550))
+
+        # Render conversation history
+        y_offset = 20
+        for message in messages:
+            message_surface = font.render(f"{message['role']}: {message['content']}", True, (0, 0, 0))
+            screen.blit(message_surface, (20, y_offset))
+            y_offset += 40
+
+        pygame.display.flip()
+        clock.tick(30)
 
     # Save the message history
     save_message_history(index, messages)
 
-if __name__ == "__main__":
+def select_history_index():
+    user_input = ""
     while True:
-        # Select a message history to load
-        history_index = input("Enter history index (0-9, 0-4 are defined characters 5-9 will be created by the AI): ").lower()
+        screen.fill((255, 255, 255))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return None
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    if user_input.isdigit() and 0 <= int(user_input) <= 9:
+                        return int(user_input)
+                    else:
+                        user_input = ""
+                elif event.key == pygame.K_BACKSPACE:
+                    user_input = user_input[:-1]
+                else:
+                    user_input += event.unicode
 
-        if history_index == "exit":
+        # Render user input
+        input_surface = font.render(f"Which character would you like to talk to (0-9): {user_input}", True, (0, 0, 0))
+        screen.blit(input_surface, (20, 300))
+
+        pygame.display.flip()
+        clock.tick(30)
+
+if __name__ == "__main__":
+    # Initialize Pygame
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    pygame.display.set_caption("Chat with Character")
+    font = pygame.font.Font(None, 36)
+    clock = pygame.time.Clock()
+
+    while True:
+        history_index = select_history_index()
+        if history_index is None:
             break
-
-        try:
-            history_index = int(history_index)
-        except ValueError:
-            print("Invalid input. Please enter a number between 0 and 9. Or 'exit' to leave.")
-            continue
-
-        if history_index < 0 or history_index > 9:
-            print("Invalid index. Please enter a number between 0 and 9. Or 'exit' to leave.")
-            continue
-
-        print()
         talk_to_character(history_index)
 
     client.close()
