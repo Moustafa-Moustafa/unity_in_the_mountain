@@ -1,4 +1,5 @@
 import pygame
+import pygame_gui
 from datetime import datetime
 import os
 import json
@@ -48,76 +49,149 @@ def save_message_history(index, messages):
         json.dump(messages, file)
         
 def talk_to_character(index):
+    manager, history_container, input_box, history_text, response_box = initialize_gui()
+    
     messages = load_message_history(index)
+    history_text.set_text(get_history_html(messages))
     user_input = ""
+    input_box.focus()
 
+    clock = pygame.time.Clock()
+
+    return_pressed = False
     while True:
-        screen.fill((255, 255, 255))
+        time_delta = clock.tick(30) / 1000.0
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_message_history(index, messages)
                 pygame.quit()
                 return
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    if user_input.lower() == "bye":
-                        save_message_history(index, messages)
-                        return
-                    # Append user message to history
-                    messages.append({
-                        "role": "Player",
-                        "content": user_input,
-                    })
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed:
+                return_pressed = True
+                user_input = input_box.get_text()
+                if user_input.lower() == "bye":
+                    save_message_history(index, messages)
+                    return
+                
+                input_box.set_text("")
 
-                    response = client.chat.completions.create(
-                        stream=True,
-                        messages=messages,
-                        max_tokens=4096,
-                        temperature=1.0,
-                        top_p=1.0,
-                        model=deployment,
-                    )
+                messages.append({
+                    "role": "user",
+                    "content": user_input,
+                })
 
-                    assistant_message = ""
-                    for update in response:
-                        if update.choices:
-                            assistant_message += update.choices[0].delta.content or ""
-                            user_input = ""
-                    
-                    # Append assistant message to history
-                    messages.append({
-                        "role": "NPC",
-                        "content": assistant_message,
-                    })
-                elif event.key == pygame.K_BACKSPACE:
-                    user_input = user_input[:-1]
-                else:
-                    user_input += event.unicode
+                response = client.chat.completions.create(
+                    stream=True,
+                    messages=messages,
+                    max_tokens=4096,
+                    temperature=1.0,
+                    top_p=1.0,
+                    model=deployment,
+                )
 
-        # Render user input
-        input_surface = font.render(f"You: {user_input}", True, (0, 0, 0))
-        screen.blit(input_surface, (20, 550))
+                assistant_message = ""
+                for chunk in response:
+                    if chunk.choices:
+                        if chunk.choices[0].delta.content:
+                            assistant_message += chunk.choices[0].delta.content
+                            response_box.set_text(assistant_message)
+                        update_gui(manager, time_delta)
 
-        # Render conversation history
-        y_offset = 20
-        for message in messages:
-            message_surface = font.render(f"{message['role']}: {message['content']}", True, (0, 0, 0))
-            screen.blit(message_surface, (20, y_offset))
-            y_offset += 40
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_message,
+                })
 
-        pygame.display.flip()
-        clock.tick(30)
+                history_text.set_text(get_history_html(messages))
+                
+                input_box.set_text("")
+                input_box.focus()
+            elif event.type == pygame.KEYUP and event.key == pygame.K_RETURN:
+                return_pressed = False
 
-    # Save the message history
-    save_message_history(index, messages)
+            manager.process_events(event)
 
-def select_history_index():
+        update_gui(manager, time_delta)
+
+def update_gui(manager, time_delta):
+    manager.update(time_delta)
+    screen.fill((255, 255, 255))
+    manager.draw_ui(screen)
+    pygame.display.flip()
+
+def initialize_gui():
+    manager = pygame_gui.UIManager(
+        (800, 600)
+    )
+    
+    history_container = pygame_gui.elements.ui_scrolling_container.UIScrollingContainer(
+        relative_rect=pygame.Rect((20, 20), (760, 360)),
+        manager=manager
+    )
+    
+    history_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((0, 0), (740, 340)),
+        manager=manager,
+        container=history_container
+    )
+    
+    response_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((20, 400), (760, 80)),
+        manager=manager
+    )
+    
+    response_box = pygame_gui.elements.ui_text_box.UITextBox(
+        html_text="",
+        relative_rect=pygame.Rect((10, 10), (740, 60)),
+        manager=manager,
+        container=response_panel
+    )
+    
+    input_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((20, 500), (760, 80)),
+        manager=manager
+    )
+    
+    input_box = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
+        relative_rect=pygame.Rect((10, 10), (740, 30)),
+        manager=manager,
+        container=input_panel
+    )
+    
+    history_text = pygame_gui.elements.ui_text_box.UITextBox(
+        html_text="",
+        relative_rect=pygame.Rect((10, 10), (720, 320)),
+        manager=manager,
+        container=history_panel
+    )
+    history_container.set_scrollable_area_dimensions(history_text.rect.size)
+    history_container.scrolling_bottom = True
+    
+    return manager, history_container, input_box, history_text, response_box
+
+def get_history_html(messages):
+    history_html = ""
+    for message in messages:
+        speaker = ""
+        if (message["role"] == "system"):
+            continue
+        elif (message["role"] == "user"):
+            speaker = "Player"
+        elif (message["role"] == "assistant"):
+            speaker = "Character"
+        history_html += f"<b>{speaker}:</b> {message['content']}<br>"
+    return history_html
+
+def select_history_index_or_quit():
     user_input = ""
     while True:
         screen.fill((255, 255, 255))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                client.close()
                 pygame.quit()
-                return None
+                exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     if user_input.isdigit() and 0 <= int(user_input) <= 9:
@@ -144,10 +218,9 @@ if __name__ == "__main__":
     font = pygame.font.Font(None, 36)
     clock = pygame.time.Clock()
 
+    history_index = None
     while True:
-        history_index = select_history_index()
-        if history_index is None:
-            break
-        talk_to_character(history_index)
+        history_index = select_history_index_or_quit()
 
-    client.close()
+        talk_to_character(history_index)
+    
