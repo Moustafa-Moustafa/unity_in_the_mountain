@@ -32,12 +32,26 @@ grid = [[None for _ in range(COLS)] for _ in range(ROWS)]
 pygame.font.init()
 font = pygame.font.SysFont(None, 48)
 
+# Load images for player and NPCs
+player_image = pygame.image.load('./data/sprites/player.PNG')
+player_image = pygame.transform.scale(player_image, (CELL_SIZE, CELL_SIZE))
+
+npc_images = {}
+npc_names = ['Aria', 'Brax', 'Luna', 'Kai', 'Zara']
+for name in npc_names:
+    npc_image = pygame.image.load(f"./data/sprites/{name}.PNG")
+    npc_image = pygame.transform.scale(npc_image, (CELL_SIZE, CELL_SIZE))
+    npc_images[name] = npc_image
+
 # Player class
-class Player:
-    def __init__(self, x, y, color):
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = player_image
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x * CELL_SIZE, y * CELL_SIZE)
         self.x = x
         self.y = y
-        self.color = color
         self.freeze = False
         grid[y][x] = self
 
@@ -49,15 +63,14 @@ class Player:
                 grid[self.y][self.x] = None
                 self.x = new_x
                 self.y = new_y
+                self.rect.topleft = (self.x * CELL_SIZE, self.y * CELL_SIZE)
                 grid[self.y][self.x] = self
-
-    def draw(self):
-        pygame.draw.rect(screen, self.color, (self.x * CELL_SIZE, self.y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
 # NPC class
 class NPC(Player):
-    def __init__(self, x, y, color, speed, label):
-        super().__init__(x, y, color)
+    def __init__(self, x, y, speed, label):
+        super().__init__(x, y)
+        self.image = npc_images[label]
         self.speed = speed
         self.move_counter = 0
         self.label = label
@@ -76,6 +89,7 @@ class NPC(Player):
                     grid[self.y][self.x] = None
                     self.x = new_x
                     self.y = new_y
+                    self.rect.topleft = (self.x * CELL_SIZE, self.y * CELL_SIZE)
                     grid[self.y][self.x] = self
 
     def follow_player(self, player):
@@ -92,26 +106,22 @@ class NPC(Player):
                 grid[self.y][self.x] = None
                 self.x = new_x
                 self.y = new_y
+                self.rect.topleft = (self.x * CELL_SIZE, self.y * CELL_SIZE)
                 grid[self.y][self.x] = self
 
     def draw(self):
-        super().draw()
-        label_surface = self.font.render(self.label, True, BLACK)
-        screen.blit(label_surface, (self.x * CELL_SIZE + 5, self.y * CELL_SIZE + 5))
+        screen.blit(self.image, self.rect.topleft)
+        label_surface = self.font.render(self.label, True, RED)
+        screen.blit(label_surface, (self.rect.x + 5, self.rect.y + 5))
 
 # Obstacles
 obstacles = [(4, 4), (4, 5), (5, 4), (5, 5), (10, 10), (15, 15)]
 for x, y in obstacles:
     grid[y][x] = 'obstacle'
 
-# Function to generate a random color
-def random_color():
-    return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
 # Create player and NPCs
-player = Player(0, 0, GREEN)
-labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random_color(), random.randint(2, 5), labels[i]) for i in range(8)]
+player = Player(0, 0)
+npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), name) for name in npc_names]
 
 # Main game loop
 running = True
@@ -130,7 +140,7 @@ while running:
                         npc.freeze = not npc.freeze
                         if npc.freeze:
                             print(f"Conversation started with NPC {npc.label}")
-            elif event.key == pygame.K_f:  # Corrected key constant
+            elif event.key == pygame.K_f:
                 for npc in npcs:
                     if npc.freeze and not npc.following:
                         npc.following = True
@@ -163,9 +173,11 @@ while running:
     screen.fill(WHITE)
     for x, y in obstacles:
         pygame.draw.rect(screen, BLUE, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    player.draw()
+    characters = pygame.sprite.Group()
+    characters.add(player)
     for npc in npcs:
-        npc.draw()
+        characters.add(npc)
+    characters.draw(screen)
     pygame.display.flip()
 
 # Display game over banner
