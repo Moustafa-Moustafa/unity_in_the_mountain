@@ -1,4 +1,5 @@
 import pygame
+from obstacle import Power
 from settings import CELL_SIZE, COLS, ROWS, WIDTH, HEIGHT, WHITE, BLACK
 
 class Player(pygame.sprite.Sprite):
@@ -14,19 +15,38 @@ class Player(pygame.sprite.Sprite):
         self.grid = grid
         self.screen = screen
         self.font = font
+        self.powers = [Power(name='lead', amount=1)]
         grid[y][x] = self
 
     def gain_party_member(self, npc):
         npc.following = True
         self.party.append(npc)
 
-        celebration_surface = pygame.Surface((WIDTH, HEIGHT // 2))
-        celebration_surface.fill(WHITE)
-        text_surface = self.font.render(f"{npc.label} has joined your party!", True, BLACK)
-        celebration_surface.blit(text_surface, (celebration_surface.get_width() // 2 - text_surface.get_width() // 2, celebration_surface.get_height() // 2 - text_surface.get_height() // 2))
-        self.screen.blit(celebration_surface, (0, 0))
-        pygame.display.flip()
-        pygame.time.wait(3000)
+    def is_next_to(self, obstacle):
+        return self.x >= obstacle.x - 1 and self.x <= obstacle.x + obstacle.width + 1 and \
+                self.y >= obstacle.y - 1 and self.y <= obstacle.y + obstacle.height + 1
+
+    def attempt_kill_obstacle(self, obstacle):
+        if self.can_pass(obstacle):
+            obstacle.kill()
+
+    def can_pass(self, obstacle):
+        # calculate the collective powers and amount of the party
+        total_powers = {}
+        for member in [self] + self.party:
+            for power in member.powers:
+                if power.name not in total_powers:
+                    total_powers[power.name] = 0
+                total_powers[power.name] += power.amount
+
+        obstacle_powers = ', '.join([f"{power.name}: {power.amount}" for power in obstacle.powers])
+        print(f"Obstacle at ({obstacle.x}, {obstacle.y}) needs powers: {obstacle_powers}")
+        print(f"total_powers: {total_powers}")
+        for power in obstacle.powers:
+            if power.name not in total_powers or total_powers[power.name] < power.amount:
+                return False
+        return True
+
 
     def move(self, dx, dy):
         new_x = self.x + dx

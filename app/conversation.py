@@ -256,6 +256,7 @@ def process_response(player, npc, response):
             print(f"Found acceptance line in response: {line}")
             if player is not None and npc is not None:
                 player.gain_party_member(npc)
+                flash_banner(f"{npc.label} has joined your party!")
             else:
                 flash_banner("An npc has joined your party!")
 

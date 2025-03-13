@@ -1,5 +1,6 @@
 import pygame
 import random
+from obstacle import Obstacle, Power
 from conversation import talk_to_character
 from settings import WIDTH, HEIGHT, ROWS, COLS, CELL_SIZE, FPS, WHITE, BLACK, BLUE
 from player import Player
@@ -23,21 +24,37 @@ font = pygame.font.SysFont(None, 48)
 player_image = pygame.image.load('./data/sprites/player.PNG')
 player_image = pygame.transform.scale(player_image, (CELL_SIZE, CELL_SIZE))
 
-npc_images = {}
-npc_names = ['Aria', 'Brax', 'Luna', 'Kai', 'Zara']
-for name in npc_names:
-    npc_image = pygame.image.load(f"./data/sprites/{name}.PNG")
-    npc_image = pygame.transform.scale(npc_image, (CELL_SIZE, CELL_SIZE))
-    npc_images[name] = npc_image
+obstacle_powers = ['solve', 'heal', 'invent', 'defend', 'connect']
+npc_powers = {
+    'Aria': [Power('solve', 5), Power('connect', 3)],
+    'Brax': [Power('defend', 5), Power('invent', 1)],
+    'Luna': [Power('heal', 5), Power('connect', 2)],
+    'Kai': [Power('invent', 5), Power('solve', 3)],
+    'Zara': [Power('connect', 5), Power('heal', 1)]
+}
 
-# Obstacles
-obstacles = [(4, 4), (4, 5), (5, 4), (5, 5), (10, 10), (15, 15)]
-for x, y in obstacles:
-    grid[y][x] = 'obstacle'
+# create obstacle sprites with the same color
+obstacles = pygame.sprite.Group()
+for i in range(5):
+    x = random.randint(0, COLS-1)
+    y = random.randint(0, ROWS-1)
+    width = random.randint(1, 3)
+    height = random.randint(1, 3)
+    # choose 2 random powers for the obstacle
+    powers = [Power(random.choice(obstacle_powers), random.randint(1, 5)) for _ in range(2)]
+    powers.append(Power('lead', 1)) # All obstacles need a leader to be passed.
+    obstacle = Obstacle(x, y, width, height, powers, grid)
+    obstacles.add(obstacle)
 
 # Create player and NPCs
 player = Player(0, 0, player_image, grid, screen, font)
-scripted_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), name, npc_images[name], grid, screen) for name in npc_names]
+
+scripted_npcs = []
+for name in npc_powers.keys():
+    image = pygame.image.load(f"./data/sprites/{name}.PNG")
+    image = pygame.transform.scale(image, (CELL_SIZE, CELL_SIZE))
+    scripted_npcs.append(NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), name, image, grid, screen, npc_powers[name]))
+
 generated_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), str(i), None, grid, screen) for i in range(3)]
 npcs = scripted_npcs + generated_npcs
 
@@ -74,6 +91,12 @@ while running and len(player.party) <= 5:
                 player.move(-1, 0)
             elif event.key == pygame.K_RIGHT:
                 player.move(1, 0)
+            elif event.key == pygame.K_k:
+                for obstacle in obstacles:
+                    if player.is_next_to(obstacle):
+                        player.attempt_kill_obstacle(obstacle)
+                        break
+
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
                 is_talking = False
@@ -92,9 +115,8 @@ while running and len(player.party) <= 5:
 
     # Draw everything
     screen.fill(WHITE)
-    for x, y in obstacles:
-        pygame.draw.rect(screen, BLUE, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
     characters.draw(screen)
+    obstacles.draw(screen)
     pygame.display.flip()
 
 # Display game over banner

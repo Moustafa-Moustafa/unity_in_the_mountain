@@ -4,15 +4,17 @@ from player import Player
 from settings import DIRECTIONS, CELL_SIZE, COLS, ROWS, RED
 
 class NPC(Player):
-    def __init__(self, x, y, speed, label, image, grid, screen):
+    def __init__(self, x, y, speed, label, image, grid, screen, powers=[]):
         if not image:
             image = pygame.Surface((CELL_SIZE, CELL_SIZE))
             image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
         super().__init__(x, y, image, grid, screen, pygame.font.SysFont(None, 24))
+        self.freeze = False
         self.speed = speed
         self.move_counter = 0
         self.label = label
         self.following = False
+        self.powers = powers
 
     def move_random(self):
         if not self.freeze and not self.following:
