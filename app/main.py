@@ -85,7 +85,11 @@ class Player(pygame.sprite.Sprite):
 class NPC(Player):
     def __init__(self, x, y, speed, label):
         super().__init__(x, y)
-        self.image = npc_images[label]
+        if label in npc_images:
+            self.image = npc_images[label]
+        else:
+            self.image = pygame.Surface((CELL_SIZE, CELL_SIZE))
+            self.image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
         self.speed = speed
         self.move_counter = 0
         self.label = label
@@ -136,7 +140,9 @@ for x, y in obstacles:
 
 # Create player and NPCs
 player = Player(0, 0)
-npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), name) for name in npc_names]
+scripted_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), name) for name in npc_names]
+generated_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), i) for i in range(3)]
+npcs = scripted_npcs + generated_npcs
 
 # Main game loop
 running = True

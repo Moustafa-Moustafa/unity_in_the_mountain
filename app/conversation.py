@@ -40,7 +40,7 @@ def load_message_history(npc_index):
 
         return history
     else:
-        print(f"No conversation history found for index {npc_index}. Loading the initial system prompts for that character.")
+        flash_banner("Generating NPC Backstory...", 0)
         prompts = []
         
         filename = f"data/system_prompts/character_{npc_index}.txt"
@@ -68,6 +68,7 @@ def load_message_history(npc_index):
         if (os.path.exists(filename)):
             prompts.append(get_system_message(filename))
         else:
+            flash_banner("Generating NPC Description...", 0)
             messages = []
             messages.append({
                 "role": "system", 
@@ -256,19 +257,23 @@ def process_response(player, npc, response):
             if player is not None and npc is not None:
                 player.gain_party_member(npc)
             else:
-                WHITE = (255, 255, 255)
-                BLACK = (0, 0, 0)
-                width, height = screen.get_size()
-                celebration_surface = pygame.Surface((width, height // 2))
-                celebration_surface.fill(WHITE)
-                text_surface = font.render(f"An npc has joined your party!", True, BLACK)
-                celebration_surface.blit(text_surface, (celebration_surface.get_width() // 2 - text_surface.get_width() // 2, celebration_surface.get_height() // 2 - text_surface.get_height() // 2))
-                screen.blit(celebration_surface, (0, 0))
-                pygame.display.flip()
-                pygame.time.wait(3000)
+                flash_banner("An npc has joined your party!")
 
             in_conversation = False
             break
+
+def flash_banner(message, wait_time=3000):
+    WHITE = (255, 255, 255)
+    BLACK = (0, 0, 0)
+    width, height = screen.get_size()
+    font = pygame.font.Font(None, 36)
+    celebration_surface = pygame.Surface((width, height // 2))
+    celebration_surface.fill(WHITE)
+    text_surface = font.render(message, True, BLACK)
+    celebration_surface.blit(text_surface, (celebration_surface.get_width() // 2 - text_surface.get_width() // 2, celebration_surface.get_height() // 2 - text_surface.get_height() // 2))
+    screen.blit(celebration_surface, (0, 0))
+    pygame.display.flip()
+    pygame.time.wait(wait_time)
 
 def get_system_message(filename):
     system_prompt = ""
@@ -291,6 +296,7 @@ def update_gui(manager, time_delta):
 
 def initialize_gui(gui_screen):
     global screen
+    font = pygame.font.Font(None, 36)
     screen = gui_screen
     screen_width, screen_height = screen.get_size()
     margin = 5
@@ -396,8 +402,8 @@ if __name__ == "__main__":
     pygame.init()
     pygame.display.set_caption("Chat with Character")
     screen = pygame.display.set_mode((800, 600))
-    font = pygame.font.Font(None, 36)
     clock = pygame.time.Clock()
+    font = pygame.font.Font(None, 36)
 
     history_index = None
     while True:
