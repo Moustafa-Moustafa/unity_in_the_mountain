@@ -131,25 +131,20 @@ following_npcs = 0
 
 while running:
     clock.tick(FPS)
+    is_talking = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and not is_talking:
                 for npc in npcs:
                     if abs(player.x - npc.x) <= 1 and abs(player.y - npc.y) <= 1:
                         npc.freeze = not npc.freeze
                         if npc.freeze:
                             print(f"Conversation started with NPC {npc.label}")
-                            talk_to_character(npcs.index(npc), screen)
-            elif event.key == pygame.K_f:
-                for npc in npcs:
-                    if npc.freeze and not npc.following:
-                        npc.following = True
-                        following_npcs += 1
-                        if following_npcs >= 5:
-                            running = False
-                            print("Game Over: 5 NPCs are following the main character!")
+                            is_talking = True
+                            talk_to_character(player, npc, npcs.index(npc), screen)
+                        break
             elif event.key == pygame.K_UP:
                 player.move(0, -1)
             elif event.key == pygame.K_DOWN:
@@ -158,6 +153,9 @@ while running:
                 player.move(-1, 0)
             elif event.key == pygame.K_RIGHT:
                 player.move(1, 0)
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                is_talking = False
 
     # Unfreeze NPCs if player moves away
     for npc in npcs:

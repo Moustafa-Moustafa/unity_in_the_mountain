@@ -7,7 +7,8 @@ from openai import AzureOpenAI
 
 
 screen = None
-font = None 
+font = None
+acceptance_prompt = None
 
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 model_name = os.getenv("AZURE_OPENAI_MODEL_NAME")
@@ -21,50 +22,69 @@ client = AzureOpenAI(
     api_key=subscription_key,
 )
 
-def load_message_history(index):
-    filename = f"data/conversations/character_{index}.json"
+def load_message_history(npc_index):
+    global acceptance_prompt
+
+    filename = f"data/conversations/character_{npc_index}.json"
     if os.path.exists(filename):
         with open(filename, "r") as file:
-            return json.load(file)
+            history = json.load(file)
+        print(f"Loaded conversation history for index {npc_index}.")
+        
+        filename = f"data/system_prompts/character_quest_acceptance_{npc_index}.txt"
+        if (os.path.exists(filename)):
+            acceptance_prompt = get_prompt(filename)
+        else:
+            acceptance_prompt = get_prompt("data/system_prompts/generic_quest_acceptance.txt")
+
+        return history
     else:
-        print(f"No conversation history found for index {index}. Loading the initial system prompts for that character.")
+        print(f"No conversation history found for index {npc_index}. Loading the initial system prompts for that character.")
         prompts = []
         
-        filename = f"data/system_prompts/character_{index}.txt"
+        filename = f"data/system_prompts/character_{npc_index}.txt"
         if (os.path.exists(filename)):
             prompts.append(get_prompt(filename))
         else:
             prompts.append(get_prompt("data/system_prompts/generic_character.txt"))
         
-        filename = f"data/system_prompts/character_quest_knowledge_{index}.txt"
+        filename = f"data/system_prompts/character_quest_knowledge_{npc_index}.txt"
         if (os.path.exists(filename)):
             prompts.append(get_prompt(filename))
         else:
             prompts.append(get_prompt("data/system_prompts/generic_character_quest_knowledge.txt"))
 
+        filename = f"data/system_prompts/character_quest_acceptance_{npc_index}.txt"
+        if (os.path.exists(filename)):
+            acceptance_prompt = get_prompt(filename)
+            prompts.append(acceptance_prompt)
+        else:
+            acceptance_prompt = get_prompt("data/system_prompts/generic_quest_acceptance.txt")
+            prompts.append(acceptance_prompt)
+
         return prompts
         
-
-def save_message_history(index, messages):
+def save_message_history(npc_index, messages):
     directory = "data/conversations"
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    filename = f"{directory}/character_{index}.json"
+    filename = f"{directory}/character_{npc_index}.json"
     
     if os.path.exists(filename):
         timestamped = datetime.now().strftime("%y%m%d_%H%M")
-        os.rename(filename, f"{directory}/{timestamped}_character_{index}.json")
+        os.rename(filename, f"{directory}/{timestamped}_character_{npc_index}.json")
     
     with open(filename, "w") as file:
         json.dump(messages, file)
-        
-def talk_to_character(index, screen):
+
+#REFACTOR: npc and npc_index are duplication. We should only be passing in one of them and looking the other up        
+def talk_to_character(player, npc, npc_index, screen):
     manager, input_box, history_text, response_box = initialize_gui(screen)
     
     system_status = [get_prompt("data/system_prompts/main_system_prompt.txt")]
 
-    current_messages = load_message_history(index)
+    current_messages = load_message_history(npc_index)
     history_text.set_text(get_history_html(current_messages))
 
     user_input = ""
@@ -78,7 +98,7 @@ def talk_to_character(index, screen):
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_message_history(index, current_messages)
+                save_message_history(npc_index, current_messages)
                 pygame.quit()
                 exit()
                 return
@@ -89,7 +109,7 @@ def talk_to_character(index, screen):
                 
                 return_pressed = True
                 if user_input.lower() == "bye":
-                    save_message_history(index, current_messages)
+                    save_message_history(npc_index, current_messages)
                     return
                 
                 input_box.set_text("")
@@ -100,7 +120,7 @@ def talk_to_character(index, screen):
                 })
 
                 messages = system_status + current_messages
-                print(messages)
+                
                 response = client.chat.completions.create(
                     stream=True,
                     messages=system_status + current_messages,
@@ -123,6 +143,8 @@ def talk_to_character(index, screen):
                     "content": assistant_response,
                 })
 
+                process_response(npc, assistant_response)
+
                 history_text.set_text(get_history_html(current_messages))
                 
                 input_box.set_text("")
@@ -133,6 +155,20 @@ def talk_to_character(index, screen):
             manager.process_events(event)
 
         update_gui(manager, time_delta)
+
+def process_response(npc, response):
+    # Process the response from the assistant
+    # This function can be customized to handle different types of responses
+    # For example, you could parse the response for specific commands or actions
+    # and execute
+    # them in the game world.
+    global acceptance_prompt
+
+    for line in acceptance_prompt["content"].splitlines():
+        if line != "" and line in response:
+            print(f"Found acceptance line in response: {line}")
+            npc.following = True
+            break
 
 def get_prompt(filename):
     system_prompt = ""
@@ -250,5 +286,6 @@ if __name__ == "__main__":
     while True:
         history_index = select_history_index_or_quit()
 
-        talk_to_character(history_index, screen)
+        # REFACTOR: we should be passing in a player and npc object here
+        talk_to_character(None, None, history_index, screen)
     
