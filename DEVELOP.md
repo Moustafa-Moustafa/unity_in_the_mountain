@@ -7,7 +7,7 @@ pip install --upgrade pip setuptools
 pip install .
 ```
 
-Setup your environment:
+Setup your environment, it's easiest to add this to a `.env` file in your workspace route.
 
 ```bash
 export AZURE_OPENAI_API_KEY="<your key>"
@@ -33,4 +33,14 @@ python app/conversation.py
 ```
 
 Note that conversations are saved and loaded each time you talk with a character. This includes between separate runs. You can delete the history of a conversation, in order to start fresh, by removing the files in `/home/rogardle/projects/unity_in_the_mountain/data/conversations`
+
+## Game Feel
+
+### Confetti Explosion
+
+```bash
+python app/confetti_explosion.py
+```
+
+Click the mouse button to deliver an explosion of particles
 

@@ -58,10 +58,17 @@ class Player(pygame.sprite.Sprite):
         grid[y][x] = self
 
     def gain_party_member(self, npc):
-        if not self.freeze:
-            npc.following = True
-            self.party.append(npc)
-            print(f"{npc.label} has joined your party!")
+        npc.following = True
+        self.party.append(npc)
+
+        celebration_surface = pygame.Surface((WIDTH, HEIGHT // 2))
+        celebration_surface.fill(WHITE)
+        text_surface = font.render(f"{npc.label} has joined your party!", True, BLACK)
+        celebration_surface.blit(text_surface, (celebration_surface.get_width() // 2 - text_surface.get_width() // 2, celebration_surface.get_height() // 2 - text_surface.get_height() // 2))
+        screen.blit(celebration_surface, (0, 0))
+        pygame.display.flip()
+        pygame.time.wait(3000)
+
 
     def move(self, dx, dy):
         if not self.freeze:

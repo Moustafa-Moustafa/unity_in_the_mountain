@@ -9,6 +9,7 @@ from openai import AzureOpenAI
 screen = None
 font = None
 acceptance_prompt = None
+in_conversation = False
 
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 model_name = os.getenv("AZURE_OPENAI_MODEL_NAME")
@@ -80,6 +81,8 @@ def save_message_history(npc_index, messages):
 
 #REFACTOR: npc and npc_index are duplication. We should only be passing in one of them and looking the other up        
 def talk_to_character(player, npc, npc_index, screen):
+    global in_conversation
+    
     manager, input_box, history_text, response_box = initialize_gui(screen)
     
     system_status = [get_prompt("data/system_prompts/main_system_prompt.txt")]
@@ -93,7 +96,8 @@ def talk_to_character(player, npc, npc_index, screen):
     clock = pygame.time.Clock()
 
     return_pressed = False
-    while True:
+    in_conversation = True
+    while in_conversation:
         time_delta = clock.tick(30) / 1000.0
         
         for event in pygame.event.get():
@@ -109,8 +113,7 @@ def talk_to_character(player, npc, npc_index, screen):
                 
                 return_pressed = True
                 if user_input.lower() == "bye":
-                    save_message_history(npc_index, current_messages)
-                    return
+                    in_conversation = False
                 
                 input_box.set_text("")
 
@@ -156,18 +159,35 @@ def talk_to_character(player, npc, npc_index, screen):
 
         update_gui(manager, time_delta)
 
+    save_message_history(npc_index, current_messages)
+    return
+
 def process_response(player, npc, response):
     # Process the response from the assistant
     # This function can be customized to handle different types of responses
     # For example, you could parse the response for specific commands or actions
     # and execute
     # them in the game world.
-    global acceptance_prompt
+    global acceptance_prompt, in_conversation
 
     for line in acceptance_prompt["content"].splitlines():
         if line != "" and line in response:
             print(f"Found acceptance line in response: {line}")
-            player.gain_party_member(npc)
+            if player is not None and npc is not None:
+                player.gain_party_member(npc)
+            else:
+                WHITE = (255, 255, 255)
+                BLACK = (0, 0, 0)
+                width, height = screen.get_size()
+                celebration_surface = pygame.Surface((width, height // 2))
+                celebration_surface.fill(WHITE)
+                text_surface = font.render(f"An npc has joined your party!", True, BLACK)
+                celebration_surface.blit(text_surface, (celebration_surface.get_width() // 2 - text_surface.get_width() // 2, celebration_surface.get_height() // 2 - text_surface.get_height() // 2))
+                screen.blit(celebration_surface, (0, 0))
+                pygame.display.flip()
+                pygame.time.wait(3000)
+
+            in_conversation = False
             break
 
 def get_prompt(filename):
@@ -194,36 +214,27 @@ def initialize_gui(gui_screen):
     screen = gui_screen
     screen_width, screen_height = screen.get_size()
     margin = 5
-    user_input_height = 50
-    response_box_height = (screen_height - user_input_height - (margin * 3)) // 2
+    user_input_height = screen_height * 0.10
+    history_box_height = screen_height * 0.5
+    response_box_height = screen_height * 0.4
     
     manager = pygame_gui.UIManager(
         (screen_width, screen_height)
     )
     
-    input_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((0, screen_height - user_input_height), (screen_width, user_input_height)),
-        manager=manager
-    )
-    input_box = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
-        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 2, user_input_height - margin * 2)),
-        manager=manager,
-        container=input_panel
-    )
-    
     history_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 2, response_box_height)),
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 2, history_box_height)),
         manager=manager
     )
     history_box = pygame_gui.elements.ui_text_box.UITextBox(
         html_text="",
-        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, response_box_height - margin * 2)),
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, history_box_height - margin * 2)),
         manager=manager,
         container=history_panel
     )
     
     response_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((margin, response_box_height + margin * 2), (screen_width - margin * 2, response_box_height)),
+        relative_rect=pygame.Rect((margin, history_box_height), (screen_width - margin * 2, response_box_height)),
         manager=manager
     )
     response_box = pygame_gui.elements.ui_text_box.UITextBox(
@@ -231,6 +242,16 @@ def initialize_gui(gui_screen):
         relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, response_box_height - margin * 2)),
         manager=manager,
         container=response_panel
+    )
+
+    input_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((0, screen_height - user_input_height), (screen_width - margin * 2, user_input_height)),
+        manager=manager
+    )
+    input_box = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, user_input_height - margin * 2)),
+        manager=manager,
+        container=input_panel
     )
     
     return manager, input_box, history_box, response_box
