@@ -1,9 +1,13 @@
+import random
+import re
 import pygame
 import pygame_gui
 from datetime import datetime
 import os
 import json
 from openai import AzureOpenAI
+
+from npc import NPC
 
 
 screen = None
@@ -251,6 +255,7 @@ def process_response(player, npc, response):
     # them in the game world.
     global acceptance_prompt, in_conversation
 
+    # Check if the response has an acceptance of the party invitation 
     for line in acceptance_prompt["content"].splitlines():
         if line != "" and line in response:
             print(f"Found acceptance line in response: {line}")
@@ -262,6 +267,25 @@ def process_response(player, npc, response):
 
             in_conversation = False
             break
+
+    # extract meta data
+    pattern = r"-+ Meta Data -+\n\n((?:.*?: .*?$)+)"
+    match = re.search(pattern, response, re.DOTALL)
+    meta_data = {}
+    if match:
+        meta_data_text = match.group(1)
+        key_value_pattern = r"(.*?): (.*?)$"
+        key_value_matches = re.finditer(key_value_pattern, meta_data_text, re.MULTILINE)
+        for kv_match in key_value_matches:
+            key = kv_match.group(1).strip()
+            value = kv_match.group(2).strip()
+            meta_data[key] = value
+        if hasattr(npc, key):
+                setattr(npc, key, value)
+        if npc is not None:
+            npc.meta_data = meta_data
+    print(meta_data)
+
 
 def flash_banner(message, wait_time=3000):
     WHITE = (255, 255, 255)
@@ -410,6 +434,8 @@ if __name__ == "__main__":
     while True:
         history_index = select_history_index_or_quit()
 
+        grid = [[None for _ in range(10)] for _ in range(10)]
+        npc = NPC(5, 5, 5, "Test NPC", None, grid, screen)
         # REFACTOR: we should be passing in a player and npc object here
-        talk_to_character(None, None, history_index, screen)
+        talk_to_character(None, npc, history_index, screen)
     
