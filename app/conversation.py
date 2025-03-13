@@ -40,13 +40,13 @@ def load_message_history(npc_index):
 
         return history
     else:
-        flash_banner("Generating NPC Backstory...", 0)
         prompts = []
         
-        filename = f"data/system_prompts/character_{npc_index}.txt"
+        filename = f"data/system_prompts/character_backstory_{npc_index}.txt"
         if (os.path.exists(filename)):
             prompts.append(get_system_message(filename))
         else:            
+            flash_banner("Generating NPC Backstory...", 0)
             messages = []
             messages.append(get_system_message("data/system_prompts/generic_character_designer_system_prompt.txt"))
             messages.append({
