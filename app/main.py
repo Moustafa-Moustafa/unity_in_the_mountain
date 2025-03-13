@@ -41,10 +41,14 @@ scripted_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), rando
 generated_npcs = [NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), str(i), None, grid, screen) for i in range(3)]
 npcs = scripted_npcs + generated_npcs
 
+characters = pygame.sprite.Group()
+characters.add(player)
+for npc in npcs:
+    characters.add(npc)
+
 # Main game loop
 running = True
 clock = pygame.time.Clock()
-following_npcs = 0
 
 while running and len(player.party) <= 5:
     clock.tick(FPS)
@@ -56,12 +60,12 @@ while running and len(player.party) <= 5:
             if event.key == pygame.K_SPACE and not is_talking:
                 for npc in npcs:
                     if abs(player.x - npc.x) <= 1 and abs(player.y - npc.y) <= 1:
-                        npc.freeze = not npc.freeze
-                        if npc.freeze:
+                        if not npc.following:
+                            npc.freeze = True
                             print(f"Conversation started with NPC {npc.label}")
                             is_talking = True
                             talk_to_character(player, npc, npcs.index(npc), screen)
-                        break
+                            break
             elif event.key == pygame.K_UP:
                 player.move(0, -1)
             elif event.key == pygame.K_DOWN:
@@ -90,10 +94,6 @@ while running and len(player.party) <= 5:
     screen.fill(WHITE)
     for x, y in obstacles:
         pygame.draw.rect(screen, BLUE, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    characters = pygame.sprite.Group()
-    characters.add(player)
-    for npc in npcs:
-        characters.add(npc)
     characters.draw(screen)
     pygame.display.flip()
 

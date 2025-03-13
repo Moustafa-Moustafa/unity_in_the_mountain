@@ -29,12 +29,11 @@ class Player(pygame.sprite.Sprite):
         pygame.time.wait(3000)
 
     def move(self, dx, dy):
-        if not self.freeze:
-            new_x = self.x + dx
-            new_y = self.y + dy
-            if 0 <= new_x < COLS and 0 <= new_y < ROWS and self.grid[new_y][new_x] is None:
-                self.grid[self.y][self.x] = None
-                self.x = new_x
-                self.y = new_y
-                self.rect.topleft = (self.x * CELL_SIZE, self.y * CELL_SIZE)
-                self.grid[self.y][self.x] = self
+        new_x = self.x + dx
+        new_y = self.y + dy
+        if 0 <= new_x < COLS and 0 <= new_y < ROWS and self.grid[new_y][new_x] is None:
+            self.grid[self.y][self.x] = None
+            self.x = new_x
+            self.y = new_y
+            self.rect.topleft = (self.x * CELL_SIZE, self.y * CELL_SIZE)
+            self.grid[self.y][self.x] = self
