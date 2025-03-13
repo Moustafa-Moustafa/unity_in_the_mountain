@@ -34,9 +34,9 @@ def load_message_history(npc_index):
         
         filename = f"data/system_prompts/character_quest_acceptance_{npc_index}.txt"
         if (os.path.exists(filename)):
-            acceptance_prompt = get_prompt(filename)
+            acceptance_prompt = get_system_message(filename)
         else:
-            acceptance_prompt = get_prompt("data/system_prompts/generic_quest_acceptance.txt")
+            acceptance_prompt = get_system_message("data/system_prompts/generic_quest_acceptance.txt")
 
         return history
     else:
@@ -45,22 +45,61 @@ def load_message_history(npc_index):
         
         filename = f"data/system_prompts/character_{npc_index}.txt"
         if (os.path.exists(filename)):
-            prompts.append(get_prompt(filename))
-        else:
-            prompts.append(get_prompt("data/system_prompts/generic_character.txt"))
+            prompts.append(get_system_message(filename))
+        else:            
+            messages = []
+            messages.append(get_system_message("data/system_prompts/generic_character_designer_system_prompt.txt"))
+            messages.append({
+                "role": "user", 
+                "content": "Create a backstory for a character. Include their name, appearance, race and personality."
+            })
+            response = send_message(messages, False)
+            backstory = ""
+            for chunk in response:
+                if chunk.choices:
+                    if chunk.choices[0].delta.content:
+                        backstory += chunk.choices[0].delta.content
+            prompts.append({
+                "role": "system", 
+                "content": backstory
+            })
         
+        filename = f"data/system_prompts/character_description_{npc_index}.txt"
+        if (os.path.exists(filename)):
+            prompts.append(get_system_message(filename))
+        else:
+            messages = []
+            messages.append({
+                "role": "system", 
+                "content": "You are a character designer for a fantasy RPG."
+            })
+            messages.append({
+                "role": "user", 
+                "content": f"Create a description of the character whose backstory is below. Include their name, appearance, race and personality.\n\n{backstory}"
+            })
+            response = send_message(messages, False)
+            description = ""
+            for chunk in response:
+                if chunk.choices:
+                    if chunk.choices[0].delta.content:
+                        description += chunk.choices[0].delta.content
+            prompts.append({
+                "role": "system", 
+                "content": description
+            })
+
         filename = f"data/system_prompts/character_quest_knowledge_{npc_index}.txt"
         if (os.path.exists(filename)):
-            prompts.append(get_prompt(filename))
+            prompts.append(get_system_message(filename))
         else:
-            prompts.append(get_prompt("data/system_prompts/generic_character_quest_knowledge.txt"))
+            prompts.append(get_system_message("data/system_prompts/generic_quest_knowledge.txt"))
 
         filename = f"data/system_prompts/character_quest_acceptance_{npc_index}.txt"
         if (os.path.exists(filename)):
-            acceptance_prompt = get_prompt(filename)
+            acceptance_prompt = get_system_message(filename)
             prompts.append(acceptance_prompt)
         else:
-            acceptance_prompt = get_prompt("data/system_prompts/generic_quest_acceptance.txt")
+            acceptance_prompt = get_system_message("data/system_prompts/generic_quest_acceptance.txt")
             prompts.append(acceptance_prompt)
 
         return prompts
@@ -85,7 +124,7 @@ def talk_to_character(player, npc, npc_index, screen):
     
     manager, input_box, history_text, response_box, followup_buttons = initialize_gui(screen)
     
-    system_status = [get_prompt("data/system_prompts/main_system_prompt.txt")]
+    system_status = [get_system_message("data/system_prompts/main_system_prompt.txt")]
 
     current_messages = load_message_history(npc_index)
     set_suggested_followups(current_messages, followup_buttons)
@@ -172,7 +211,7 @@ def talk_to_character(player, npc, npc_index, screen):
 def set_suggested_followups(messages, followup_buttons):
     messages.append({
                     "role": "user",
-                    "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. Only use information that has been provided to the player in responses. List them one per line with no bullets or numberuing.",
+                    "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. The suggestions must only use information that has been provided to the player by the assistant in responses. List them one per line with no bullets or numberuing.",
                 })
     response = send_message(messages, False)
     followup_questions = ""
@@ -231,7 +270,7 @@ def process_response(player, npc, response):
             in_conversation = False
             break
 
-def get_prompt(filename):
+def get_system_message(filename):
     system_prompt = ""
     with open(filename, "r") as file:
         system_prompt = file.read()
@@ -241,7 +280,7 @@ def get_prompt(filename):
             "role": "system", 
             "content": system_prompt
         }
-    0
+    
     return system_status
 
 def update_gui(manager, time_delta):
