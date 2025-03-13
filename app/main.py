@@ -54,11 +54,13 @@ class Player(pygame.sprite.Sprite):
         self.x = x
         self.y = y
         self.freeze = False
+        self.party = []
         grid[y][x] = self
 
     def gain_party_member(self, npc):
         if not self.freeze:
             npc.following = True
+            self.party.append(npc)
             print(f"{npc.label} has joined your party!")
 
     def move(self, dx, dy):
@@ -134,7 +136,7 @@ running = True
 clock = pygame.time.Clock()
 following_npcs = 0
 
-while running:
+while running and len(player.party) <= 5:
     clock.tick(FPS)
     is_talking = False
     for event in pygame.event.get():
@@ -187,7 +189,10 @@ while running:
 
 # Display game over banner
 screen.fill(WHITE)
-game_over_surface = font.render("Game Over: 5 NPCs are following!", True, BLACK)
+if (len(player.party) >= 5):
+    game_over_surface = font.render("Game Over\n\nYou have a full party.\nThe adventure is afoot!", True, BLACK)
+else:
+    game_over_surface = font.render("Game Over\n\nYou didn't gather enough party members.\nMaybe another time.", True, BLACK)
 screen.blit(game_over_surface, (WIDTH // 2 - game_over_surface.get_width() // 2, HEIGHT // 2 - game_over_surface.get_height() // 2))
 pygame.display.flip()
 pygame.time.wait(3000)
