@@ -56,6 +56,11 @@ class Player(pygame.sprite.Sprite):
         self.freeze = False
         grid[y][x] = self
 
+    def gain_party_member(self, npc):
+        if not self.freeze:
+            npc.following = True
+            print(f"{npc.label} has joined your party!")
+
     def move(self, dx, dy):
         if not self.freeze:
             new_x = self.x + dx

@@ -143,7 +143,7 @@ def talk_to_character(player, npc, npc_index, screen):
                     "content": assistant_response,
                 })
 
-                process_response(npc, assistant_response)
+                process_response(player, npc, assistant_response)
 
                 history_text.set_text(get_history_html(current_messages))
                 
@@ -156,7 +156,7 @@ def talk_to_character(player, npc, npc_index, screen):
 
         update_gui(manager, time_delta)
 
-def process_response(npc, response):
+def process_response(player, npc, response):
     # Process the response from the assistant
     # This function can be customized to handle different types of responses
     # For example, you could parse the response for specific commands or actions
@@ -167,7 +167,7 @@ def process_response(npc, response):
     for line in acceptance_prompt["content"].splitlines():
         if line != "" and line in response:
             print(f"Found acceptance line in response: {line}")
-            npc.following = True
+            player.gain_party_member(npc)
             break
 
 def get_prompt(filename):
