@@ -29,14 +29,11 @@ def load_message_history(index):
             return json.load(file)
     else:
         print(f"No conversation history found for index {index}. Loading the initial system prompt for that character.")
-        filename = f"data/initial_system_prompts/character_{index}.json"
+        filename = f"data/system_prompts/character_{index}.txt"
         if (os.path.exists(filename)):
-            with open(filename, "r") as file:
-                return json.load(file)
+            return get_prompt(filename)
         else:
-            filename = "data/initial_system_prompts/generic.json"
-            with open(filename, "r") as file:
-                return json.load(file)
+            return get_prompt("data/system_prompts/generic_character.txt")
 
 def save_message_history(index, messages):
     directory = "data/conversations"
@@ -55,8 +52,11 @@ def save_message_history(index, messages):
 def talk_to_character(index, screen):
     manager, input_box, history_text, response_box = initialize_gui(screen)
     
-    messages = load_message_history(index)
-    history_text.set_text(get_history_html(messages))
+    system_status = get_prompt("data/system_prompts/main_system_prompt.txt")
+
+    current_messages = load_message_history(index)
+    history_text.set_text(get_history_html(current_messages))
+
     user_input = ""
     input_box.focus()
 
@@ -68,46 +68,49 @@ def talk_to_character(index, screen):
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_message_history(index, messages)
+                save_message_history(index, current_messages)
                 pygame.quit()
+                exit()
                 return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed:
                 return_pressed = True
                 user_input = input_box.get_text()
                 if user_input.lower() == "bye":
-                    save_message_history(index, messages)
+                    save_message_history(index, current_messages)
                     return
                 
                 input_box.set_text("")
 
-                messages.append({
+                current_messages.append({
                     "role": "user",
                     "content": user_input,
                 })
 
+                messages = system_status + current_messages
+                print(messages)
                 response = client.chat.completions.create(
                     stream=True,
-                    messages=messages,
+                    messages=system_status + current_messages,
                     max_tokens=4096,
                     temperature=1.0,
                     top_p=1.0,
                     model=deployment,
                 )
 
-                assistant_message = ""
+                assistant_response = ""
                 for chunk in response:
                     if chunk.choices:
                         if chunk.choices[0].delta.content:
-                            assistant_message += chunk.choices[0].delta.content
-                            response_box.set_text(assistant_message)
+                            assistant_response += chunk.choices[0].delta.content
+                            response_box.set_text(assistant_response)
                         update_gui(manager, time_delta)
 
-                messages.append({
+                current_messages.append({
                     "role": "assistant",
-                    "content": assistant_message,
+                    "content": assistant_response,
                 })
 
-                history_text.set_text(get_history_html(messages))
+                history_text.set_text(get_history_html(current_messages))
                 
                 input_box.set_text("")
                 input_box.focus()
@@ -118,6 +121,19 @@ def talk_to_character(index, screen):
 
         update_gui(manager, time_delta)
 
+def get_prompt(filename):
+    system_prompt = ""
+    with open(filename, "r") as file:
+        system_prompt = file.read()
+
+    system_status = []
+    system_status.insert(0, {
+            "role": "system", 
+            "content": system_prompt
+        }
+    )
+    return system_status
+
 def update_gui(manager, time_delta):
     manager.update(time_delta)
     screen.fill((255, 255, 255))
@@ -127,55 +143,48 @@ def update_gui(manager, time_delta):
 def initialize_gui(gui_screen):
     global screen
     screen = gui_screen
+    screen_width, screen_height = screen.get_size()
+    margin = 5
+    user_input_height = 50
+    response_box_height = (screen_height - user_input_height - (margin * 3)) // 2
     
     manager = pygame_gui.UIManager(
-        (800, 600)
-    )
-    
-    history_container = pygame_gui.elements.ui_scrolling_container.UIScrollingContainer(
-        relative_rect=pygame.Rect((20, 20), (760, 360)),
-        manager=manager
-    )
-    
-    history_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((0, 0), (740, 340)),
-        manager=manager,
-        container=history_container
-    )
-    
-    response_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((20, 400), (760, 80)),
-        manager=manager
-    )
-    
-    response_box = pygame_gui.elements.ui_text_box.UITextBox(
-        html_text="",
-        relative_rect=pygame.Rect((10, 10), (740, 60)),
-        manager=manager,
-        container=response_panel
+        (screen_width, screen_height)
     )
     
     input_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((20, 500), (760, 80)),
+        relative_rect=pygame.Rect((0, screen_height - user_input_height), (screen_width, user_input_height)),
         manager=manager
     )
-    
     input_box = pygame_gui.elements.ui_text_entry_line.UITextEntryLine(
-        relative_rect=pygame.Rect((10, 10), (740, 30)),
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 2, user_input_height - margin * 2)),
         manager=manager,
         container=input_panel
     )
     
-    history_text = pygame_gui.elements.ui_text_box.UITextBox(
+    history_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 2, response_box_height)),
+        manager=manager
+    )
+    history_box = pygame_gui.elements.ui_text_box.UITextBox(
         html_text="",
-        relative_rect=pygame.Rect((10, 10), (720, 320)),
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, response_box_height - margin * 2)),
         manager=manager,
         container=history_panel
     )
-    history_container.set_scrollable_area_dimensions(history_text.rect.size)
-    history_container.scrolling_bottom = True
     
-    return manager, input_box, history_text, response_box
+    response_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((margin, response_box_height + margin * 2), (screen_width - margin * 2, response_box_height)),
+        manager=manager
+    )
+    response_box = pygame_gui.elements.ui_text_box.UITextBox(
+        html_text="",
+        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, response_box_height - margin * 2)),
+        manager=manager,
+        container=response_panel
+    )
+    
+    return manager, input_box, history_box, response_box
 
 def get_history_html(messages):
     history_html = ""
