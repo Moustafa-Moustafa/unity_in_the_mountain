@@ -23,17 +23,27 @@ client = AzureOpenAI(
 
 def load_message_history(index):
     filename = f"data/conversations/character_{index}.json"
-    
     if os.path.exists(filename):
         with open(filename, "r") as file:
             return json.load(file)
     else:
-        print(f"No conversation history found for index {index}. Loading the initial system prompt for that character.")
+        print(f"No conversation history found for index {index}. Loading the initial system prompts for that character.")
+        prompts = []
+        
         filename = f"data/system_prompts/character_{index}.txt"
         if (os.path.exists(filename)):
-            return get_prompt(filename)
+            prompts.append(get_prompt(filename))
         else:
-            return get_prompt("data/system_prompts/generic_character.txt")
+            prompts.append(get_prompt("data/system_prompts/generic_character.txt"))
+        
+        filename = f"data/system_prompts/character_quest_knowledge_{index}.txt"
+        if (os.path.exists(filename)):
+            prompts.append(get_prompt(filename))
+        else:
+            prompts.append(get_prompt("data/system_prompts/generic_character_quest_knowledge.txt"))
+
+        return prompts
+        
 
 def save_message_history(index, messages):
     directory = "data/conversations"
@@ -52,7 +62,7 @@ def save_message_history(index, messages):
 def talk_to_character(index, screen):
     manager, input_box, history_text, response_box = initialize_gui(screen)
     
-    system_status = get_prompt("data/system_prompts/main_system_prompt.txt")
+    system_status = [get_prompt("data/system_prompts/main_system_prompt.txt")]
 
     current_messages = load_message_history(index)
     history_text.set_text(get_history_html(current_messages))
@@ -73,8 +83,11 @@ def talk_to_character(index, screen):
                 exit()
                 return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed:
-                return_pressed = True
                 user_input = input_box.get_text()
+                if (user_input == ""):
+                    continue
+                
+                return_pressed = True
                 if user_input.lower() == "bye":
                     save_message_history(index, current_messages)
                     return
@@ -126,12 +139,12 @@ def get_prompt(filename):
     with open(filename, "r") as file:
         system_prompt = file.read()
 
-    system_status = []
-    system_status.insert(0, {
+    system_status = None
+    system_status = {
             "role": "system", 
             "content": system_prompt
         }
-    )
+    0
     return system_status
 
 def update_gui(manager, time_delta):
@@ -196,7 +209,7 @@ def get_history_html(messages):
             speaker = "Player"
         elif (message["role"] == "assistant"):
             speaker = "Character"
-        history_html += f"<b>{speaker}:</b> {message['content']}<br>"
+        history_html += f"<p><b>{speaker}:</b> {message['content']}</p>"
     return history_html
 
 def select_history_index_or_quit():
