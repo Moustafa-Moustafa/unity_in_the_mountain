@@ -83,11 +83,12 @@ def save_message_history(npc_index, messages):
 def talk_to_character(player, npc, npc_index, screen):
     global in_conversation
     
-    manager, input_box, history_text, response_box = initialize_gui(screen)
+    manager, input_box, history_text, response_box, followup_buttons = initialize_gui(screen)
     
     system_status = [get_prompt("data/system_prompts/main_system_prompt.txt")]
 
     current_messages = load_message_history(npc_index)
+    set_suggested_followups(current_messages, followup_buttons)
     history_text.set_text(get_history_html(current_messages))
 
     user_input = ""
@@ -97,6 +98,7 @@ def talk_to_character(player, npc, npc_index, screen):
 
     return_pressed = False
     in_conversation = True
+    send_followup = False
     while in_conversation:
         time_delta = clock.tick(30) / 1000.0
         
@@ -106,7 +108,19 @@ def talk_to_character(player, npc, npc_index, screen):
                 pygame.quit()
                 exit()
                 return
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed:
+            if event.type == pygame.USEREVENT:
+                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == followup_buttons[0]:
+                        input_box.set_text(followup_buttons[0].text)
+                        send_followup = True
+                    if event.ui_element == followup_buttons[1]:
+                        input_box.set_text(followup_buttons[1].text)
+                        send_followup = True
+                    if event.ui_element == followup_buttons[2]:
+                        input_box.set_text(followup_buttons[2].text)
+                        send_followup = True
+            elif send_followup or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed):
+                send_followup = False
                 user_input = input_box.get_text()
                 if (user_input == ""):
                     continue
@@ -115,23 +129,15 @@ def talk_to_character(player, npc, npc_index, screen):
                 if user_input.lower() == "bye":
                     in_conversation = False
                 
-                input_box.set_text("")
+                input_box.set_text(input_box.get_text() + " (said, awaiting response...)")
+                update_gui(manager, time_delta)
 
                 current_messages.append({
-                    "role": "user",
-                    "content": user_input,
-                })
-
+                                "role": "user",
+                                "content": user_input,
+                            })
                 messages = system_status + current_messages
-                
-                response = client.chat.completions.create(
-                    stream=True,
-                    messages=system_status + current_messages,
-                    max_tokens=4096,
-                    temperature=1.0,
-                    top_p=1.0,
-                    model=deployment,
-                )
+                response = send_message(messages)
 
                 assistant_response = ""
                 for chunk in response:
@@ -147,6 +153,7 @@ def talk_to_character(player, npc, npc_index, screen):
                 })
 
                 process_response(player, npc, assistant_response)
+                set_suggested_followups(current_messages, followup_buttons)
 
                 history_text.set_text(get_history_html(current_messages))
                 
@@ -161,6 +168,40 @@ def talk_to_character(player, npc, npc_index, screen):
 
     save_message_history(npc_index, current_messages)
     return
+
+def set_suggested_followups(messages, followup_buttons):
+    messages.append({
+                    "role": "user",
+                    "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. Only use information that has been provided to the player in responses. List them one per line with no bullets or numberuing.",
+                })
+    response = send_message(messages, False)
+    followup_questions = ""
+    for chunk in response:
+        if chunk.choices:
+            if chunk.choices[0].delta.content:
+                followup_questions += chunk.choices[0].delta.content
+
+    messages.pop()  # Remove the followup question prompt, response was never added to the history
+    followup_questions = followup_questions.splitlines()
+    for i in range(len(followup_buttons)):
+        if i < len(followup_questions):
+            followup_buttons[i].show()
+            followup_buttons[i].set_text(followup_questions[i])
+        else:
+            followup_buttons[i].hide()
+            followup_buttons[i].set_text("")
+    
+def send_message(messages, is_streaming=True):
+    response = client.chat.completions.create(
+                    stream=True,
+                    messages=messages,
+                    max_tokens=4096,
+                    temperature=1.0,
+                    top_p=1.0,
+                    model=deployment,
+                )
+    
+    return response
 
 def process_response(player, npc, response):
     # Process the response from the assistant
@@ -214,9 +255,10 @@ def initialize_gui(gui_screen):
     screen = gui_screen
     screen_width, screen_height = screen.get_size()
     margin = 5
-    user_input_height = screen_height * 0.10
     history_box_height = screen_height * 0.5
-    response_box_height = screen_height * 0.4
+    response_box_height = screen_height * 0.25
+    user_input_height = screen_height * 0.10
+    suggested_followup_height = screen_height * 0.05
     
     manager = pygame_gui.UIManager(
         (screen_width, screen_height)
@@ -253,8 +295,23 @@ def initialize_gui(gui_screen):
         manager=manager,
         container=input_panel
     )
+
+    followup_panel = pygame_gui.elements.ui_panel.UIPanel(
+        relative_rect=pygame.Rect((margin, screen_height - user_input_height - suggested_followup_height * 3), (screen_width - margin * 2, suggested_followup_height * 3)),
+        manager=manager
+    )
+    followup_buttons = []
+    for i in range(3):
+        button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((margin, margin + i * (suggested_followup_height)), (screen_width - margin * 4, suggested_followup_height - margin * 2)),
+            text=f"Followup {i + 1}",
+            manager=manager,
+            container=followup_panel
+        )
+        button.hide()
+        followup_buttons.append(button)
     
-    return manager, input_box, history_box, response_box
+    return manager, input_box, history_box, response_box, followup_buttons
 
 def get_history_html(messages):
     history_html = ""
