@@ -284,8 +284,6 @@ def process_response(player, npc, response):
                 setattr(npc, key, value)
         if npc is not None:
             npc.meta_data = meta_data
-    print(meta_data)
-
 
 def flash_banner(message, wait_time=3000):
     WHITE = (255, 255, 255)
