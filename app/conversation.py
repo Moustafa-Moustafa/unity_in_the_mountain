@@ -125,16 +125,16 @@ def save_message_history(npc_index, messages):
 
 #REFACTOR: npc and npc_index are duplication. We should only be passing in one of them and looking the other up        
 def talk_to_character(player, npc, npc_index, screen):
-    global in_conversation
+    global in_conversation, history_text
     
-    manager, input_box, history_text, response_box, followup_buttons = initialize_gui(screen)
+    manager, input_box, history_text, followup_buttons = initialize_gui(screen)
     
     system_status = [get_system_message("data/system_prompts/main_system_prompt.txt")]
 
     current_messages = load_message_history(npc_index)
     set_suggested_followups(current_messages, followup_buttons)
-    history_text.set_text(get_history_html(current_messages))
-
+    update_history_text(current_messages, npc)
+    
     user_input = ""
     input_box.focus()
 
@@ -152,17 +152,11 @@ def talk_to_character(player, npc, npc_index, screen):
                 pygame.quit()
                 exit()
                 return
-            if event.type == pygame.USEREVENT:
-                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                    if event.ui_element == followup_buttons[0]:
-                        input_box.set_text(followup_buttons[0].text)
-                        send_followup = True
-                    if event.ui_element == followup_buttons[1]:
-                        input_box.set_text(followup_buttons[1].text)
-                        send_followup = True
-                    if event.ui_element == followup_buttons[2]:
-                        input_box.set_text(followup_buttons[2].text)
-                        send_followup = True
+            if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                    for button in followup_buttons:
+                        if event.ui_element == button:
+                            input_box.set_text(button.text)
+                            send_followup = True
             elif send_followup or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and not return_pressed):
                 send_followup = False
                 user_input = input_box.get_text()
@@ -170,7 +164,7 @@ def talk_to_character(player, npc, npc_index, screen):
                     continue
                 
                 return_pressed = True
-                if user_input.lower() == "bye":
+                if re.search(r"\bbye\b|\bgoodbye\b|\bbye!$", user_input.lower()):
                     in_conversation = False
                 
                 input_box.set_text(input_box.get_text() + " (said, awaiting response...)")
@@ -188,7 +182,6 @@ def talk_to_character(player, npc, npc_index, screen):
                     if chunk.choices:
                         if chunk.choices[0].delta.content:
                             assistant_response += chunk.choices[0].delta.content
-                            response_box.set_text(assistant_response)
                         update_gui(manager, time_delta)
 
                 current_messages.append({
@@ -199,7 +192,7 @@ def talk_to_character(player, npc, npc_index, screen):
                 process_response(player, npc, assistant_response)
                 set_suggested_followups(current_messages, followup_buttons)
 
-                history_text.set_text(get_history_html(current_messages))
+                update_history_text(current_messages, npc)
                 
                 input_box.set_text("")
                 input_box.focus()
@@ -212,6 +205,23 @@ def talk_to_character(player, npc, npc_index, screen):
 
     save_message_history(npc_index, current_messages)
     return
+
+def update_history_text(messages, character):
+    global history_text
+    
+    history_html = ""
+    for message in messages:
+        if (message["role"] == "system"):
+            continue
+        elif (message["role"] == "user"):
+            history_html += "<p/><p>--------------------------------------------------------------------</p><p/>"
+            history_html += f"<p><b>You:</b> {message['content']}</p>"
+        elif (message["role"] == "assistant"):
+            history_html += f"<p><b>{character.label}:</b> {message['content']}</p>"
+
+    history_text.set_text(history_html)
+    if history_text.scroll_bar is not None:
+        history_text.scroll_bar.set_scroll_from_start_percentage(1.0)
 
 def set_suggested_followups(messages, followup_buttons):
     messages.append({
@@ -232,8 +242,8 @@ def set_suggested_followups(messages, followup_buttons):
             followup_buttons[i].show()
             followup_buttons[i].set_text(followup_questions[i])
         else:
-            followup_buttons[i].hide()
-            followup_buttons[i].set_text("")
+            followup_buttons[i].show()
+            followup_buttons[i].set_text("Good Bye.")
     
 def send_message(messages, is_streaming=True):
     response = client.chat.completions.create(
@@ -323,10 +333,10 @@ def initialize_gui(gui_screen):
     screen = gui_screen
     screen_width, screen_height = screen.get_size()
     margin = 5
-    history_box_height = screen_height * 0.5
-    response_box_height = screen_height * 0.25
-    user_input_height = screen_height * 0.10
-    suggested_followup_height = screen_height * 0.05
+    number_of_followup_buttons = 4
+    history_box_height = screen_height * 0.74
+    user_input_height = screen_height * 0.08
+    suggested_followup_button_height = (screen_height - (history_box_height + user_input_height)) / number_of_followup_buttons
     
     manager = pygame_gui.UIManager(
         (screen_width, screen_height)
@@ -342,17 +352,6 @@ def initialize_gui(gui_screen):
         manager=manager,
         container=history_panel
     )
-    
-    response_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((margin, history_box_height), (screen_width - margin * 2, response_box_height)),
-        manager=manager
-    )
-    response_box = pygame_gui.elements.ui_text_box.UITextBox(
-        html_text="",
-        relative_rect=pygame.Rect((margin, margin), (screen_width - margin * 4, response_box_height - margin * 2)),
-        manager=manager,
-        container=response_panel
-    )
 
     input_panel = pygame_gui.elements.ui_panel.UIPanel(
         relative_rect=pygame.Rect((0, screen_height - user_input_height), (screen_width - margin * 2, user_input_height)),
@@ -365,13 +364,13 @@ def initialize_gui(gui_screen):
     )
 
     followup_panel = pygame_gui.elements.ui_panel.UIPanel(
-        relative_rect=pygame.Rect((margin, screen_height - user_input_height - suggested_followup_height * 3), (screen_width - margin * 2, suggested_followup_height * 3)),
+        relative_rect=pygame.Rect((margin, screen_height - user_input_height - suggested_followup_button_height * number_of_followup_buttons), (screen_width - margin * 2, suggested_followup_button_height * number_of_followup_buttons)),
         manager=manager
     )
     followup_buttons = []
-    for i in range(3):
+    for i in range(number_of_followup_buttons):
         button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((margin, margin + i * (suggested_followup_height)), (screen_width - margin * 4, suggested_followup_height - margin * 2)),
+            relative_rect=pygame.Rect((margin, (margin / 2) + (i * suggested_followup_button_height)), (screen_width - margin * 4, suggested_followup_button_height - (margin / 2))),
             text=f"Followup {i + 1}",
             manager=manager,
             container=followup_panel
@@ -379,20 +378,7 @@ def initialize_gui(gui_screen):
         button.hide()
         followup_buttons.append(button)
     
-    return manager, input_box, history_box, response_box, followup_buttons
-
-def get_history_html(messages):
-    history_html = ""
-    for message in messages:
-        speaker = ""
-        if (message["role"] == "system"):
-            continue
-        elif (message["role"] == "user"):
-            speaker = "Player"
-        elif (message["role"] == "assistant"):
-            speaker = "Character"
-        history_html += f"<p><b>{speaker}:</b> {message['content']}</p>"
-    return history_html
+    return manager, input_box, history_box, followup_buttons
 
 def select_history_index_or_quit():
     user_input = ""
