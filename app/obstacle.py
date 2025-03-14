@@ -1,3 +1,4 @@
+import random
 import pygame
 from settings import CELL_SIZE, BLUE
 
@@ -5,7 +6,8 @@ class Obstacle(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, powers, grid):
         super().__init__()
         image = pygame.Surface((width*CELL_SIZE, height*CELL_SIZE))
-        image.fill(BLUE)
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        image.fill(color)
         self.image = image
         self.rect = self.image.get_rect()
         self.rect.topleft = (x * CELL_SIZE, y * CELL_SIZE)
@@ -32,4 +34,3 @@ class Power():
     def __init__(self, name, amount):
         self.name = name
         self.amount = amount
-        

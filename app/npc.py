@@ -7,8 +7,8 @@ from settings import DIRECTIONS, CELL_SIZE, COLS, ROWS, RED
 class NPC(Player):
     def __init__(self, x, y, speed, label, image, grid, screen, powers=[]):
         if not image:
-            image = pygame.Surface((CELL_SIZE, CELL_SIZE))
-            image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+            image = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+            pygame.draw.circle(image, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), (CELL_SIZE // 2, CELL_SIZE // 2), CELL_SIZE // 2)
         super().__init__(x, y, image, grid, screen, pygame.font.SysFont(None, 24))
         self.freeze = False
         self.speed = speed

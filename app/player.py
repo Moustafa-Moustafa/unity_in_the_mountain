@@ -23,14 +23,14 @@ class Player(pygame.sprite.Sprite):
         self.party.append(npc)
 
     def is_next_to(self, obstacle):
-        return self.x >= obstacle.x - 1 and self.x <= obstacle.x + obstacle.width + 1 and \
-                self.y >= obstacle.y - 1 and self.y <= obstacle.y + obstacle.height + 1
+        return self.x >= obstacle.x - 1 and self.x <= obstacle.x + obstacle.width  and \
+                self.y >= obstacle.y - 1 and self.y <= obstacle.y + obstacle.height 
 
     def attempt_kill_obstacle(self, obstacle):
         if self.can_pass(obstacle):
             obstacle.kill()
 
-    def can_pass(self, obstacle):
+    def get_total_powers(self):
         # calculate the collective powers and amount of the party
         total_powers = {}
         for member in [self] + self.party:
@@ -38,7 +38,10 @@ class Player(pygame.sprite.Sprite):
                 if power.name not in total_powers:
                     total_powers[power.name] = 0
                 total_powers[power.name] += power.amount
+        return total_powers
 
+    def can_pass(self, obstacle):
+        total_powers = self.get_total_powers()
         obstacle_powers = ', '.join([f"{power.name}: {power.amount}" for power in obstacle.powers])
         print(f"Obstacle at ({obstacle.x}, {obstacle.y}) needs powers: {obstacle_powers}")
         print(f"total_powers: {total_powers}")
