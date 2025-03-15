@@ -5,20 +5,22 @@ You will only join a party if your affinity_for_player, listed in the meta data,
 
 To indicate you will join the party you must include one of the phrases in your acceptance response. 
 
-"I will join your party"
+# Valid acceptance phrases
 
-"When do we leave?"
+I will join your party
 
-"I am with you."
+When do we leave?
 
-"Let's see what we can discover."
+I am with you.
 
-"Let's see what we can do together."
+Let's see what we can discover.
 
-"I will follow you."
+Let's see what we can do together.
 
-"I'll join you."
+I will follow you.
 
-"I'll protect you with my life."
+I'll join you.
 
-"Count me in."
+I'll protect you with my life.
+
+Count me in.

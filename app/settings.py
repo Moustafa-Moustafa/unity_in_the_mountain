@@ -1,4 +1,9 @@
+# Game Config
+NUMBER_OF_NPCS = 2
+
+# UI
 WIDTH, HEIGHT = 800, 800
+SIDE_WIDTH = 200
 ROWS, COLS = 20, 20
 CELL_SIZE = WIDTH // COLS
 FPS = 10
@@ -11,3 +16,7 @@ RED = (255, 0, 0)
 
 # Directions
 DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+# Sprites
+available_character_sprites_path = './data/sprites/available_characters'
+character_sprites_path = './data/sprites/assigned_characters'
