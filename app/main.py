@@ -91,7 +91,7 @@ while running and len(player.party) <= 5:
                             npc.freeze = True
                             print(f"Conversation started with NPC {npc.label}")
                             is_talking = True
-                            talk_to_character(player, npc, npcs.index(npc))
+                            talk_to_character(player, npc)
                             break
             elif event.key == pygame.K_UP or event.key == pygame.K_w:
                 player.move(0, -1)

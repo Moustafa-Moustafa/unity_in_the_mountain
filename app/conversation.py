@@ -78,8 +78,7 @@ def save_message_history(npc, messages):
     with open(story_filename, "w") as file:
         json.dump(story, file)
 
-#REFACTOR: npc and npc_index are duplication. We should only be passing in one of them and looking the other up        
-def talk_to_character(player, npc, npc_index):
+def talk_to_character(player, npc):
     global in_conversation, history_text
     
     print(f"Starting conversation with {npc.label} the {npc.meta_data['race']} {npc.meta_data['class']}.")
@@ -286,5 +285,5 @@ if __name__ == "__main__":
         grid = [[None for _ in range(10)] for _ in range(10)]
         npc = NPC(5, 5, 5, "Test NPC", None, [])
         # REFACTOR: we should be passing in a player and npc object here
-        talk_to_character(None, npc, history_index)
+        talk_to_character(None, npc)
     
