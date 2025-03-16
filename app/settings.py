@@ -1,5 +1,5 @@
 # Game Config
-NUMBER_OF_NPCS = 2
+NUMBER_OF_NPCS = 7
 
 # Files
 authored_npcs_path = './data/characters/authored'

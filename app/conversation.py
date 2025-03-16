@@ -180,6 +180,24 @@ def update_history_text(messages, character):
         elif (message["role"] == "assistant"):
             history_html += f"<p><b>{character.label}:</b> {message['content']}</p>"
 
+    if (history_html == ""):
+        prompt = []
+        prompt.append(llm.get_system_message_from_string(character.description))
+        prompt.append({
+            "role": "user",
+            "content": f"Create a short (a few sentences) physical description for the character described below. Do not include their name. Do not include inforamtion about their personality.\n\n{json.dumps(character.meta_data)}"
+        })
+        response = llm.send_message(prompt, False)
+        if isinstance(response, str):
+            history_html = "<p/>You approach to talk:<p/>"
+        else:
+            history_html = "<p>"
+            for chunk in response:
+                if chunk.choices:
+                    if chunk.choices[0].delta.content:
+                        history_html += chunk.choices[0].delta.content
+            history_html += "</p>"
+
     history_text.set_text(history_html)
     if history_text.scroll_bar is not None:
         history_text.scroll_bar.set_scroll_from_start_percentage(1.0)
