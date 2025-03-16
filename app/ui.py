@@ -61,7 +61,7 @@ def draw_side_window(player, obstacles, npcs):
             y_offset += 30
             for stat in npc.meta_data["statistics"]:
                 value = npc.meta_data["statistics"][stat]
-                color = (0, 255, 0) if total_stats.get(stat, 0) >= value else (255, 0, 0)
+                color = (0, 255, 0) if total_stats.get(stat, 0)/len(npcs) <= value else (255, 0, 0)
                 side_window.blit(ui.font.render(f"{stat}: {value}", True, color), (10, y_offset))
                 y_offset += 30
 

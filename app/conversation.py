@@ -215,7 +215,7 @@ def set_suggested_followups(messages, followup_buttons):
     else:
         messages.append({
                         "role": "user",
-                        "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. The suggestions must only use information that has been provided to the player by the assistant in responses. List them one per line with no bullets or numberuing.",
+                        "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. The suggestions must only use information that has been provided to the player by the assistant in responses. None of them will seek to end the conversation. List them one per line with no bullets or numbering.",
                     })
         response = llm.send_message(messages, False)
         
@@ -228,6 +228,7 @@ def set_suggested_followups(messages, followup_buttons):
                     if chunk.choices[0].delta.content:
                         followup_questions += chunk.choices[0].delta.content
             followup_questions = followup_questions.splitlines()
+            followup_questions = [q for q in followup_questions if q.strip()]
 
         messages.pop()  # Remove the followup question prompt, response was never added to the history
 

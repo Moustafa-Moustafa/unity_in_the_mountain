@@ -2,8 +2,7 @@ import random
 import pygame
 import settings
 import ui
-
-from obstacle import Power
+import json
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -34,6 +33,29 @@ class Player(pygame.sprite.Sprite):
             "gold": 0,
             "inventory": []
         }
+
+    def to_json(self):
+        player_state = {
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+            "freeze": self.freeze,
+            "party": [member.meta_data for member in self.party],
+            "meta_data": self.meta_data
+        }
+        return json.dumps(player_state, indent=4)
+    
+    def from_json(json_str):
+        data = json.loads(json_str)
+        player = Player(data["x"], data["y"])
+        player.width = data["width"]
+        player.height = data["height"]
+        player.freeze = data["freeze"]
+        player.meta_data = data["meta_data"]
+        from npc import NPC
+        player.party = [NPC.from_json(json.dumps(member)) for member in data["party"]]
+        return player
 
     def gain_party_member(self, npc):
         npc.following = True

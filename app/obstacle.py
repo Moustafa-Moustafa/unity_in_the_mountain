@@ -19,6 +19,19 @@ class Obstacle(pygame.sprite.Sprite):
         self.powers = powers
         self.fill_grid(self)
 
+    def to_json(self):
+        return {
+            'x': self.x,
+            'y': self.y,
+            'width': self.width,
+            'height': self.height,
+            'powers': [{'name': power.name, 'amount': power.amount} for power in self.powers]
+        }
+
+    def from_json(data):
+        powers = [Power(power['name'], power['amount']) for power in data['powers']]
+        return Obstacle(data['x'], data['y'], data['width'], data['height'], powers)
+
     def kill(self):
         self.fill_grid(None)
         super().kill()

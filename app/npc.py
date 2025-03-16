@@ -24,6 +24,27 @@ class NPC(Player):
         else:
             self.image = image
         
+    def to_json(self):
+        return json.dumps({
+            'x': self.x,
+            'y': self.y,
+            'speed': self.speed,
+            'label': self.label,
+            'meta_data': self.meta_data,
+            'backstory': self.backstory,
+            'description': self.description,
+            'knowledge': self.knowledge
+        })
+
+    def from_json(json_str):
+        data = json.loads(json_str)
+        npc = NPC(data['x'], data['y'], data['speed'], data['label'])
+        npc.meta_data = data['meta_data']
+        npc.backstory = data['backstory']
+        npc.description = data['description']
+        npc.knowledge = data['knowledge']
+        return npc
+
     def configure_sprite(self):
         available_sprites = os.listdir(settings.available_character_sprites_path)
         if available_sprites:

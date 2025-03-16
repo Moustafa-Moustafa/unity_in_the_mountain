@@ -1,5 +1,7 @@
 # Game Config
 NUMBER_OF_NPCS = 7
+DIFFICULTY = 8 # this defines the difficulty of destroying the obstacles, anything beliw 4 is likely too easy, above 12 is likely too hard. Increasing this increases the number of party members that will be needed.
+SAVE_FILENAME = "data/save.json"
 
 # Files
 authored_npcs_path = './data/characters/authored'
