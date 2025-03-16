@@ -9,7 +9,10 @@ from settings import WIDTH, HEIGHT, ROWS, COLS, CELL_SIZE, FPS, WHITE, BLACK
 from player import Player
 from npc import NPC
 import os
-import json
+
+def draw_treasure():
+    if ui.grid[treasure_y][treasure_x] is None:  # Only draw the treasure if the obstacle is removed
+        ui.screen.blit(treasure_image, (treasure_x * CELL_SIZE, treasure_y * CELL_SIZE))
 
 # Initialize
 pygame.init()
@@ -63,10 +66,6 @@ characters = pygame.sprite.Group()
 characters.add(player)
 for npc in npcs:
     characters.add(npc)
-
-def draw_treasure():
-    if ui.grid[treasure_y][treasure_x] is None:  # Only draw the treasure if the obstacle is removed
-        ui.screen.blit(treasure_image, (treasure_x * CELL_SIZE, treasure_y * CELL_SIZE))
 
 # Main game loop
 running = True

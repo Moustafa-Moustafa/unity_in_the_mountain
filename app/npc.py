@@ -33,6 +33,7 @@ class NPC(Player):
             os.makedirs(settings.character_sprites_path, exist_ok=True)
             os.rename(source_path, destination_path)
             self.image = pygame.image.load(destination_path).convert_alpha()
+            self.image = pygame.transform.scale(self.image, (settings.CELL_SIZE, settings.CELL_SIZE))
         else:
             self.image = pygame.Surface((settings.CELL_SIZE, settings.CELL_SIZE), pygame.SRCALPHA)
             pygame.draw.circle(self.image, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), (settings.CELL_SIZE // 2, settings.CELL_SIZE // 2), settings.CELL_SIZE // 2)
