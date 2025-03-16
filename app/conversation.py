@@ -1,3 +1,4 @@
+import random
 import re
 import pygame
 import pygame_gui
@@ -5,6 +6,7 @@ from datetime import datetime
 import llm
 import os
 import json
+import settings
 import ui
 
 from npc import NPC
@@ -182,24 +184,35 @@ def update_history_text(messages, character):
     if history_text.scroll_bar is not None:
         history_text.scroll_bar.set_scroll_from_start_percentage(1.0)
 
-def set_suggested_followups(messages, followup_buttons):
-    messages.append({
-                    "role": "user",
-                    "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. The suggestions must only use information that has been provided to the player by the assistant in responses. List them one per line with no bullets or numberuing.",
-                })
-    response = llm.send_message(messages, False)
-    
-    if isinstance(response, str):
-        followup_questions = ""
-    else:
-        followup_questions = ""
-        for chunk in response:
-            if chunk.choices:
-                if chunk.choices[0].delta.content:
-                    followup_questions += chunk.choices[0].delta.content
+def defaultQuestions():
+    return [
+        "Are you aware of any adventure opportunities around here?",
+        "Hi there, you look like you might be interested in adventure?",
+        "Hi there, who are you?"
+    ]
 
-    messages.pop()  # Remove the followup question prompt, response was never added to the history
-    followup_questions = followup_questions.splitlines()
+def set_suggested_followups(messages, followup_buttons):
+    if not any(message["role"] == "user" for message in messages):
+        followup_questions = defaultQuestions()
+    else:
+        messages.append({
+                        "role": "user",
+                        "content": "Provide 3 followup messages the player may say next. At least two of the follow ups must be natural follow ons from the previous messages, the third will be related to the players desire to create a party. The suggestions must only use information that has been provided to the player by the assistant in responses. List them one per line with no bullets or numberuing.",
+                    })
+        response = llm.send_message(messages, False)
+        
+        if isinstance(response, str):
+            followup_questions = defaultQuestions()
+        else:
+            followup_questions = ""
+            for chunk in response:
+                if chunk.choices:
+                    if chunk.choices[0].delta.content:
+                        followup_questions += chunk.choices[0].delta.content
+            followup_questions = followup_questions.splitlines()
+
+        messages.pop()  # Remove the followup question prompt, response was never added to the history
+
     for i in range(len(followup_buttons)):
         if i < len(followup_questions):
             followup_buttons[i].show()
@@ -246,33 +259,6 @@ def process_response(player, npc, response):
         if npc is not None:
             npc.meta_data = meta_data
 
-def select_history_index_or_quit():
-    user_input = ""
-    while True:
-        ui.screen.fill((255, 255, 255))
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                llm.client.close()
-                pygame.quit()
-                exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    if user_input.isdigit() and 0 <= int(user_input) <= 9:
-                        return int(user_input)
-                    else:
-                        user_input = ""
-                elif event.key == pygame.K_BACKSPACE:
-                    user_input = user_input[:-1]
-                else:
-                    user_input += event.unicode
-
-        # Render user input
-        input_surface = ui.font.render(f"Which character would you like to talk to (0-9): {user_input}", True, (0, 0, 0))
-        ui.screen.blit(input_surface, (20, 300))
-
-        pygame.display.flip()
-        clock.tick(30)
-
 if __name__ == "__main__":
     pygame.init()
     clock = pygame.time.Clock()
@@ -280,10 +266,15 @@ if __name__ == "__main__":
 
     history_index = None
     while True:
-        history_index = select_history_index_or_quit()
-
         grid = [[None for _ in range(10)] for _ in range(10)]
-        npc = NPC(5, 5, 5, "Test NPC", None, [])
+        generated_npcs = os.listdir(settings.generated_npcs_path)
+        if len(generated_npcs) > 0:
+            character_name = random.choice(generated_npcs)
+            npc = NPC(5, 5, 3, character_name)
+            generated_npcs.remove(character_name)
+        else:
+            npc = NPC(5, 5, 3)
+
         # REFACTOR: we should be passing in a player and npc object here
         talk_to_character(None, npc)
     

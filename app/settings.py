@@ -1,6 +1,10 @@
 # Game Config
 NUMBER_OF_NPCS = 2
 
+# Files
+authored_npcs_path = './data/characters/authored'
+generated_npcs_path = './data/characters/generated'
+
 # UI
 WIDTH, HEIGHT = 800, 800
 SIDE_WIDTH = 200

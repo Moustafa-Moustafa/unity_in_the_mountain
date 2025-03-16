@@ -38,19 +38,16 @@ treasure_x, treasure_y = treasure_obstacle.x, treasure_obstacle.y
 
 player = Player(0, 0)
 
-authored_npcs_path = './data/characters/authored'
-generated_npcs_path = './data/characters/generated'
-
 npcs = []
 num_npcs = settings.NUMBER_OF_NPCS
 
-authored_files = [f for f in os.listdir(authored_npcs_path) if os.path.isdir(os.path.join(authored_npcs_path, f))]
+authored_files = [f for f in os.listdir(settings.authored_npcs_path) if os.path.isdir(os.path.join(settings.authored_npcs_path, f))]
 num_of_authored_npcs = min(5, len(authored_files))
 random.shuffle(authored_files)
 for character_name in authored_files[:num_of_authored_npcs]:
     npcs.append(NPC(random.randint(0, COLS-1), random.randint(0, ROWS-1), random.randint(2, 5), character_name))
 
-generated_npcs = os.listdir(generated_npcs_path)
+generated_npcs = os.listdir(settings.generated_npcs_path)
 while len(npcs) < num_npcs:
     if random.random() < 0.8 and len(generated_npcs) > 0:
         character_name = random.choice(generated_npcs)
